@@ -238,6 +238,101 @@ class BedtimeBookStudioTests(unittest.TestCase):
         rev_status = book_studio.get_revision_status("leos-cardboard-rocket")
         self.assertEqual(rev_status["assets"]["page-02-reality"]["status"], "approved")
 
+    def test_issue9_qr_code_generation_for_local_wifi(self) -> None:
+        sample_sb = json.loads((REPO_ROOT / "examples" / "sample-storyboard.json").read_text(encoding="utf-8"))
+        # Trim to 1 page for fast full-asset publish test
+        sample_sb["pages"] = [sample_sb["pages"][0]]
+        book_studio.init_book_project(
+            slug="qr-test-book",
+            title="QR Test Book",
+            idea="Testing QR delivery",
+            page_count=1,
+        )
+        book_studio.save_storyboard("qr-test-book", sample_sb)
+
+        img = self._make_sample_image("sample.png", (100, 150, 220))
+        book_studio.ingest_book_images(
+            "qr-test-book",
+            {
+                "cover": str(img),
+                "page-01-reality": str(img),
+                "page-01-imaginary": str(img),
+            },
+        )
+
+        pub = book_studio.publish_book("qr-test-book", serve_local=False, deploy_static=False)
+        self.assertTrue(pub["lan_url"].endswith("/qr-test-book/"))
+        qr_svg_path = Path(pub["lan_qr_svg_path"])
+        self.assertTrue(qr_svg_path.exists())
+        svg_text = qr_svg_path.read_text(encoding="utf-8")
+        self.assertIn("<svg", svg_text)
+        self.assertIn(pub["lan_url"], svg_text)
+        self.assertIn("█", pub["lan_qr_ascii"])
+
+    def test_issue10_storyboard_schema_validation_aliases_and_publish_guard(self) -> None:
+        book_studio.init_book_project(
+            slug="schema-test-book",
+            title="Schema Test Book",
+            idea="Testing schema validation",
+            page_count=1,
+        )
+
+        # 1. Malformed storyboard (missing title and missing imaginary_prompt in lift-the-flap mode) fails fast
+        invalid_sb = {
+            "mode": "lift-the-flap",
+            "cover": {"prompt": "Cover prompt"},
+            "pages": [
+                {
+                    "number": 1,
+                    "title": "Page 1",
+                    "paragraphs": ["Hello world"],
+                    "reality_prompt": "Real scene",
+                    # missing imaginary_prompt!
+                }
+            ],
+        }
+        with self.assertRaises(book_studio.StoryboardValidationError) as ctx:
+            book_studio.save_storyboard("schema-test-book", invalid_sb)
+        err_msg = str(ctx.exception)
+        self.assertIn("root.title", err_msg)
+        self.assertIn("imaginary_prompt", err_msg)
+
+        # 2. Legacy aliases ('cover_prompt', 'text', 'real_prompt', 'imaginary_caption', 'flap_hint') normalize cleanly with warnings
+        legacy_sb = {
+            "title": "Legacy Alias Book",
+            "mode": "lift-the-flap",
+            "cover_prompt": "A warm cover prompt",
+            "pages": [
+                {
+                    "number": 1,
+                    "title": "Page One",
+                    "text": "Single string paragraph that gets normalized to list.",
+                    "real_prompt": "Everyday living room scene.",
+                    "imaginary_prompt": "Magical outer space scene.",
+                    "imaginary_caption": "Outer Space!",
+                    "flap_hint": "Lift the rocket flap!",
+                }
+            ],
+        }
+        saved = book_studio.save_storyboard("schema-test-book", legacy_sb)
+        self.assertGreaterEqual(len(saved["validation_warnings"]), 5)
+        saved_on_disk = json.loads(Path(saved["storyboard_path"]).read_text(encoding="utf-8"))
+        self.assertEqual(saved_on_disk["cover"]["prompt"], "A warm cover prompt")
+        self.assertEqual(
+            saved_on_disk["pages"][0]["paragraphs"],
+            ["Single string paragraph that gets normalized to list."],
+        )
+        self.assertEqual(saved_on_disk["pages"][0]["reality_prompt"], "Everyday living room scene.")
+        self.assertEqual(saved_on_disk["pages"][0]["imagination_label"], "Outer Space!")
+        self.assertEqual(saved_on_disk["pages"][0]["flap_prompt"], "Lift the rocket flap!")
+
+        # 3. Pre-publish asset guard refuses to publish when required images are missing on disk
+        with self.assertRaises(book_studio.StoryboardValidationError) as pub_ctx:
+            book_studio.publish_book("schema-test-book", serve_local=False, deploy_static=False)
+        self.assertIn("assets/cover.png", str(pub_ctx.exception))
+        self.assertIn("assets/page-01-reality.png", str(pub_ctx.exception))
+        self.assertIn("assets/page-01-imaginary.png", str(pub_ctx.exception))
+
 
 if __name__ == "__main__":
     unittest.main()

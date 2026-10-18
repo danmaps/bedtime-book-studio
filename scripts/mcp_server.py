@@ -226,11 +226,22 @@ def save_book_storyboard(
 
 
 @mcp.tool()
+def validate_book_storyboard(slug: str, require_assets: bool = False) -> str:
+    """
+    Validate a book's `storyboard.json` against the canonical schema (and optionally check
+    that all required PNG/WebP assets exist on disk when `require_assets=True`).
+    Returns structured `valid`, `errors`, `warnings`, and `page_count`.
+    """
+    res = book_studio.validate_book_storyboard(slug=slug, require_assets=require_assets)
+    return json.dumps(res, indent=2)
+
+
+@mcp.tool()
 def generate_book_preview(slug: str) -> str:
     """
     Step 2b / Review: Generate `<project_dir>/preview.html`, an interactive HTML contact sheet
     that works text-first (0 images) or with draft/final thumbnails, including side-by-side
-    Reality vs. Imaginary cards and an interactive Overlay Alignment Inspector.
+    Reality vs. Imaginary cards, an interactive Overlay Alignment Inspector, and a Local Wi-Fi QR code.
     """
     res = book_studio.generate_book_preview(slug=slug)
     return json.dumps(res, indent=2)

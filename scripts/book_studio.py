@@ -38,6 +38,11 @@ from typing import Any, Dict, List, Optional
 
 from PIL import Image, ImageOps
 
+try:
+    from scripts.qr_code import render_qr_ascii, render_qr_svg
+except ImportError:
+    from qr_code import render_qr_ascii, render_qr_svg
+
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parent
 ENV_FILE = REPO_ROOT / ".env"
@@ -74,6 +79,18 @@ VALID_ENTITY_KINDS = ("main_character", "supporting_character", "pet", "prop")
 VALID_REVISION_SCOPES = ("text-only", "reality-only", "imaginary-only", "paired-scene")
 
 
+class StoryboardValidationError(ValueError):
+    """Raised when a storyboard fails schema validation or is missing required image assets."""
+
+    def __init__(self, errors: List[str], warnings: Optional[List[str]] = None) -> None:
+        self.errors = errors
+        self.warnings = warnings or []
+        msg = "Storyboard validation failed:\n" + "\n".join(f"  - {e}" for e in errors)
+        if self.warnings:
+            msg += "\nWarnings:\n" + "\n".join(f"  - {w}" for w in self.warnings)
+        super().__init__(msg)
+
+
 def _utc_now_iso() -> str:
     return datetime.datetime.now(datetime.timezone.utc).replace(microsecond=0).isoformat()
 
@@ -92,6 +109,192 @@ def slugify(text: str, prefix: str = "") -> str:
     if prefix and not slug.startswith(f"{prefix}-"):
         return f"{prefix}-{slug}"
     return slug
+
+
+def validate_and_normalize_storyboard(
+    storyboard: Dict[str, Any],
+    project_dir: Optional[Path] = None,
+    require_assets: bool = False,
+) -> Dict[str, Any]:
+    """
+    Validate a storyboard dictionary against the canonical Bedtime Book Studio schema,
+    normalizing legacy field aliases and recording actionable deprecation warnings.
+    Raises `StoryboardValidationError` if required fields or (when `require_assets=True`)
+    required image files are missing or malformed.
+    """
+    errors: List[str] = []
+    warnings: List[str] = []
+
+    if not isinstance(storyboard, dict):
+        raise StoryboardValidationError(["Root storyboard payload must be a JSON object."])
+
+    sb = json.loads(json.dumps(storyboard))
+
+    title = sb.get("title")
+    if not isinstance(title, str) or not title.strip():
+        errors.append("root.title: Missing or empty required string field 'title'.")
+
+    mode = sb.get("mode", "lift-the-flap")
+    if mode not in ("lift-the-flap", "standard"):
+        errors.append(f"root.mode: Invalid mode '{mode}'. Must be 'lift-the-flap' or 'standard'.")
+    else:
+        sb["mode"] = mode
+
+    # Normalize cover
+    cover = sb.get("cover")
+    if not isinstance(cover, dict):
+        cover = {}
+    if not cover.get("prompt") and sb.get("cover_prompt"):
+        cover["prompt"] = sb.pop("cover_prompt")
+        warnings.append("root.cover_prompt: Deprecated top-level field normalized to 'cover.prompt'.")
+    if not isinstance(cover.get("prompt"), str) or not cover.get("prompt", "").strip():
+        errors.append("cover.prompt: Missing or empty required cover illustration prompt ('cover.prompt').")
+    sb["cover"] = cover
+
+    # Normalize end card
+    end_info = sb.get("end")
+    if not isinstance(end_info, dict):
+        end_info = {}
+    if "end_kicker" in sb and not end_info.get("kicker"):
+        end_info["kicker"] = sb.pop("end_kicker")
+        warnings.append("root.end_kicker: Deprecated field normalized to 'end.kicker'.")
+    if "end_subtitle" in sb and not end_info.get("subtitle"):
+        end_info["subtitle"] = sb.pop("end_subtitle")
+        warnings.append("root.end_subtitle: Deprecated field normalized to 'end.subtitle'.")
+    if end_info:
+        sb["end"] = end_info
+
+    pages = sb.get("pages")
+    if not isinstance(pages, list) or len(pages) == 0:
+        errors.append("root.pages: Must be a non-empty array of story page objects.")
+        pages = []
+
+    seen_numbers: set[int] = set()
+    normalized_pages: List[Dict[str, Any]] = []
+
+    for idx, raw_p in enumerate(pages):
+        loc = f"pages[{idx}]"
+        if not isinstance(raw_p, dict):
+            errors.append(f"{loc}: Page entry must be a JSON object.")
+            continue
+        p = dict(raw_p)
+
+        raw_num = p.get("number")
+        if raw_num is None:
+            errors.append(f"{loc}.number: Missing required 1-based integer field 'number'.")
+            num = idx + 1
+        else:
+            try:
+                num = int(raw_num)
+                if num < 1:
+                    errors.append(f"{loc}.number: Page number must be >= 1 (got {raw_num}).")
+            except (TypeError, ValueError):
+                errors.append(f"{loc}.number: Page number must be an integer (got {raw_num!r}).")
+                num = idx + 1
+        if num in seen_numbers:
+            errors.append(f"{loc}.number: Duplicate page number {num}.")
+        seen_numbers.add(num)
+        p["number"] = num
+
+        # Title
+        if not isinstance(p.get("title"), str) or not p.get("title", "").strip():
+            errors.append(f"{loc} (Page {num}).title: Missing or empty required string field 'title'.")
+
+        # Badge alias
+        if not p.get("badge") and p.get("label"):
+            p["badge"] = p.pop("label")
+            warnings.append(f"{loc} (Page {num}).label: Deprecated alias normalized to 'badge'.")
+        elif not p.get("badge"):
+            p["badge"] = f"Page {num}"
+
+        # Paragraphs alias ('text' -> 'paragraphs')
+        if "paragraphs" not in p and "text" in p:
+            p["paragraphs"] = p.pop("text")
+            warnings.append(f"{loc} (Page {num}).text: Deprecated alias normalized to 'paragraphs'.")
+        elif "paragraphs" in p and "text" in p:
+            p.pop("text", None)
+
+        paras = p.get("paragraphs")
+        if isinstance(paras, str) and paras.strip():
+            p["paragraphs"] = [paras.strip()]
+            warnings.append(f"{loc} (Page {num}).paragraphs: String value normalized to 1-element string array.")
+        elif isinstance(paras, list) and len(paras) > 0 and all(isinstance(x, str) and x.strip() for x in paras):
+            p["paragraphs"] = [x.strip() for x in paras]
+        else:
+            errors.append(f"{loc} (Page {num}).paragraphs: Missing or empty required array of story text strings.")
+
+        # Reality prompt alias ('real_prompt' / 'prompt' -> 'reality_prompt')
+        if not p.get("reality_prompt"):
+            if p.get("real_prompt"):
+                p["reality_prompt"] = p.pop("real_prompt")
+                warnings.append(f"{loc} (Page {num}).real_prompt: Deprecated alias normalized to 'reality_prompt'.")
+            elif p.get("prompt"):
+                p["reality_prompt"] = p.pop("prompt")
+                warnings.append(f"{loc} (Page {num}).prompt: Deprecated alias normalized to 'reality_prompt'.")
+
+        if not isinstance(p.get("reality_prompt"), str) or not p.get("reality_prompt", "").strip():
+            errors.append(f"{loc} (Page {num}).reality_prompt: Missing or empty required 'reality_prompt'.")
+
+        # Lift-the-flap fields & aliases
+        if not p.get("imagination_label"):
+            for alias in ("imaginary_caption", "imaginaryCaption"):
+                if p.get(alias):
+                    p["imagination_label"] = p.pop(alias)
+                    warnings.append(f"{loc} (Page {num}).{alias}: Deprecated alias normalized to 'imagination_label'.")
+                    break
+
+        if not p.get("flap_prompt"):
+            for alias in ("flap_hint", "flapHint"):
+                if p.get(alias):
+                    p["flap_prompt"] = p.pop(alias)
+                    warnings.append(f"{loc} (Page {num}).{alias}: Deprecated alias normalized to 'flap_prompt'.")
+                    break
+
+        if mode == "lift-the-flap":
+            if not isinstance(p.get("imaginary_prompt"), str) or not p.get("imaginary_prompt", "").strip():
+                errors.append(
+                    f"{loc} (Page {num}).imaginary_prompt: Required in 'lift-the-flap' mode but missing or empty."
+                )
+
+        normalized_pages.append(p)
+
+    # Check sequential numbering 1..N
+    if normalized_pages and not errors:
+        expected = list(range(1, len(normalized_pages) + 1))
+        actual = [int(p["number"]) for p in normalized_pages]
+        if actual != expected:
+            errors.append(
+                f"root.pages: Page numbers must be sequential 1..{len(normalized_pages)} (got {actual})."
+            )
+
+    sb["pages"] = normalized_pages
+
+    # Check required image assets on disk if requested (e.g. before publish)
+    if require_assets and project_dir is not None:
+        assets_dir = project_dir / "assets"
+        if not ((assets_dir / "cover.png").exists() or (assets_dir / "cover.webp").exists()):
+            errors.append(f"assets/cover.png: Missing required cover image in {assets_dir}")
+        for p in normalized_pages:
+            num = int(p["number"])
+            r_stem = f"page-{num:02d}-reality"
+            if not ((assets_dir / f"{r_stem}.png").exists() or (assets_dir / f"{r_stem}.webp").exists()):
+                errors.append(f"assets/{r_stem}.png: Missing required reality image for Page {num} in {assets_dir}")
+            if mode == "lift-the-flap":
+                i_stem = f"page-{num:02d}-imaginary"
+                if not ((assets_dir / f"{i_stem}.png").exists() or (assets_dir / f"{i_stem}.webp").exists()):
+                    errors.append(
+                        f"assets/{i_stem}.png: Missing required imaginary flap image for Page {num} in {assets_dir}"
+                    )
+
+    if errors:
+        raise StoryboardValidationError(errors=errors, warnings=warnings)
+
+    return {
+        "valid": True,
+        "normalized_storyboard": sb,
+        "warnings": warnings,
+        "page_count": len(normalized_pages),
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -1284,18 +1487,64 @@ def _assemble_page_prompts(
     }
 
 
+def validate_book_storyboard(
+    slug: str,
+    require_assets: bool = False,
+) -> Dict[str, Any]:
+    """Validate an existing book's `storyboard.json` (and optionally its required image assets on disk)."""
+    slug = slugify(slug)
+    project_dir = get_books_dir() / slug
+    sb_path = project_dir / "storyboard.json"
+    if not sb_path.exists():
+        raise FileNotFoundError(f"Missing storyboard.json in {project_dir}")
+
+    raw_sb = json.loads(sb_path.read_text(encoding="utf-8"))
+    try:
+        res = validate_and_normalize_storyboard(
+            raw_sb,
+            project_dir=project_dir,
+            require_assets=require_assets,
+        )
+        return {
+            "slug": slug,
+            "valid": True,
+            "require_assets": require_assets,
+            "errors": [],
+            "warnings": res["warnings"],
+            "page_count": res["page_count"],
+        }
+    except StoryboardValidationError as exc:
+        return {
+            "slug": slug,
+            "valid": False,
+            "require_assets": require_assets,
+            "errors": exc.errors,
+            "warnings": exc.warnings,
+        }
+
+
 def save_storyboard(
     slug: str,
     storyboard: Dict[str, Any],
     supports_reference_images: bool = True,
 ) -> Dict[str, Any]:
     """
-    Validate and save `storyboard.json`, resolve persistent entity identities and
+    Validate and normalize `storyboard.json` against the canonical schema (converting any
+    legacy field aliases with warnings), resolve persistent entity identities and
     transformation mappings, and generate `prompts.md` + the structured image generation plan.
     """
     slug = slugify(slug)
     project_dir = get_books_dir() / slug
     project_dir.mkdir(parents=True, exist_ok=True)
+
+    val_res = validate_and_normalize_storyboard(
+        storyboard,
+        project_dir=project_dir,
+        require_assets=False,
+    )
+    storyboard = val_res["normalized_storyboard"]
+    validation_warnings = val_res["warnings"]
+
     sb_path = project_dir / "storyboard.json"
     _atomic_write_text(sb_path, json.dumps(storyboard, indent=2, ensure_ascii=False))
 
@@ -1304,7 +1553,7 @@ def save_storyboard(
     mode = storyboard.get("mode", "lift-the-flap")
     title = storyboard.get("title", slug)
     char_bible = storyboard.get("character_bible", "")
-    cover_prompt = (storyboard.get("cover") or {}).get("prompt") or storyboard.get("cover_prompt") or ""
+    cover_prompt = (storyboard.get("cover") or {}).get("prompt") or ""
     pages = storyboard.get("pages") or []
 
     resolved_entities = _resolve_book_entities(project_dir, storyboard)
@@ -1466,6 +1715,7 @@ def save_storyboard(
         "slug": slug,
         "storyboard_path": str(sb_path),
         "prompts_markdown_path": str(prompts_md_path),
+        "validation_warnings": validation_warnings,
         "supports_reference_images": supports_reference_images,
         "capability_warnings": capability_warnings,
         "total_images_needed": len(required_images),
@@ -1701,7 +1951,7 @@ def revise_book_page(
     # If text-only (or if reader already exists), atomically rebuild reader immediately
     rebuilt_reader = None
     if scope == "text-only" or (project_dir / "index.html").exists():
-        rebuilt_reader = publish_book(slug, serve_local=False, deploy_static=False)
+        rebuilt_reader = publish_book(slug, serve_local=False, deploy_static=False, strict_assets=False)
 
     tasks_for_affected = [
         req for req in sb_res["required_images"] if req["key"] in affected_assets
@@ -1806,7 +2056,7 @@ def rollback_book_asset(
 
     rebuilt = None
     if (project_dir / "storyboard.json").exists():
-        rebuilt = publish_book(slug, serve_local=False, deploy_static=False)
+        rebuilt = publish_book(slug, serve_local=False, deploy_static=False, strict_assets=False)
 
     return {
         "slug": slug,
@@ -1826,14 +2076,15 @@ def get_revision_status(slug: str) -> Dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
-# Storyboard & Flap Alignment Contact-Sheet Preview (`preview.html` — Issues #2 & #5)
+# Storyboard & Flap Alignment Contact-Sheet Preview (`preview.html` — Issues #2, #5 & #9)
 # ---------------------------------------------------------------------------
 
 def generate_book_preview(slug: str) -> Dict[str, Any]:
     """
     Generate an interactive HTML contact-sheet preview (`<project_dir>/preview.html`)
     that works before any final artwork exists (text-first mode) or with draft/final
-    thumbnails, including a Reality↔Imagination Overlay Alignment Inspector and review checklist.
+    thumbnails, including a Reality↔Imagination Overlay Alignment Inspector, review checklist,
+    and a scannable Local Wi-Fi QR code for iPad/phone testing.
     """
     slug = slugify(slug)
     project_dir = get_books_dir() / slug
@@ -1850,6 +2101,12 @@ def generate_book_preview(slug: str) -> Dict[str, Any]:
     subtitle = storyboard.get("subtitle", "")
     resolved_entities = _resolve_book_entities(project_dir, storyboard)
     assets_state = rev_state.get("assets") or {}
+
+    local_port = int(profile["paths"]["local_server_port"] or 8765)
+    lan_ip = _get_lan_ip()
+    lan_book_url = f"http://{lan_ip}:{local_port}/{slug}/"
+    qr_svg_path = project_dir / "qr-lan.svg"
+    _atomic_write_text(qr_svg_path, render_qr_svg(lan_book_url, title=f"Scan to open {title}"))
 
     def _badge_html(status: str, is_draft: bool = False) -> str:
         st = "draft" if is_draft and status == "generated" else status
@@ -2007,6 +2264,8 @@ def generate_book_preview(slug: str) -> Dict[str, Any]:
     header {{ background: #fff; padding: 20px 24px; border-radius: 16px; box-shadow: 0 4px 16px rgba(15,23,42,0.06); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }}
     h1 {{ margin: 0 0 6px; font-size: 1.6rem; }}
     .status-pill {{ display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 800; letter-spacing: 0.04em; }}
+    .qr-banner {{ background: #fff; border: 1px solid #e2e8f0; border-radius: 16px; padding: 16px 20px; display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }}
+    .qr-banner img {{ width: 96px; height: 96px; border-radius: 8px; border: 1px solid #cbd5e1; }}
     .cast-grid {{ display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }}
     .cast-chip {{ background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; font-size: 0.85rem; display: grid; gap: 4px; }}
     .cast-meta {{ color: #475569; }}
@@ -2046,6 +2305,14 @@ def generate_book_preview(slug: str) -> Dict[str, Any]:
       </div>
       <div>Storyboard Approval: {sb_status_badge}</div>
     </header>
+    <section class="qr-banner">
+      <img src="qr-lan.svg" alt="Local Wi-Fi QR Code" />
+      <div>
+        <strong>📱 Open on iPad or Phone over Local Wi-Fi</strong>
+        <div>Scan with the iPad/iPhone Camera app to open in Mobile Safari with full lift-the-flap touch support:</div>
+        <div><a href="{html.escape(lan_book_url)}"><code>{html.escape(lan_book_url)}</code></a></div>
+      </div>
+    </section>
     <section>
       <h3>Assigned Cast & Prop Identities</h3>
       <div class="cast-grid">{''.join(cast_cards) or '<div>No structured entities assigned.</div>'}</div>
@@ -2064,6 +2331,8 @@ def generate_book_preview(slug: str) -> Dict[str, Any]:
     return {
         "slug": slug,
         "preview_html": str(preview_path),
+        "lan_qr_svg_path": str(qr_svg_path),
+        "lan_book_url": lan_book_url,
         "storyboard_approved": rev_state.get("storyboard_approved", False),
         "page_count": len(storyboard.get("pages") or []),
     }
@@ -2215,12 +2484,14 @@ def ensure_local_server(books_dir: Path, port: int = 8765) -> Dict[str, Any]:
             time.sleep(0.1)
 
     lan_ip = _get_lan_ip()
+    lan_base = f"http://{lan_ip}:{port}"
     return {
         "running": _is_port_open(port),
         "port": port,
         "books_dir": str(books_dir),
         "localhost_base": f"http://localhost:{port}",
-        "lan_base": f"http://{lan_ip}:{port}",
+        "lan_base": lan_base,
+        "lan_qr_ascii": render_qr_ascii(lan_base),
     }
 
 
@@ -2232,12 +2503,14 @@ def publish_book(
     web_root_override: Optional[str] = None,
     base_url_override: Optional[str] = None,
     bedtime_mode: Optional[bool] = None,
+    strict_assets: bool = True,
 ) -> Dict[str, Any]:
     """
-    Atomically build:
+    Validate storyboard and required image assets, then atomically build:
       1. A self-contained single-file HTML book (`<slug>.html`) with all CSS, JS, and images inlined.
       2. A standard multi-file web reader (`index.html`, `styles.css`, `script.js`, `assets/`).
-      3. By default, host locally on the user's device (`http://localhost:<port>/<slug>/` and LAN URL).
+      3. By default, host locally on the user's device (`http://localhost:<port>/<slug>/` and LAN URL)
+         and generate a scannable Local Wi-Fi QR code (`<project_dir>/qr-lan.svg` + `lan_qr_ascii`).
       4. Optionally copy to `PUBLISH_WEB_ROOT` if configured in `.env`.
     """
     slug = slugify(slug)
@@ -2248,7 +2521,16 @@ def publish_book(
         raise FileNotFoundError(f"Missing storyboard.json in {project_dir}")
 
     profile = get_studio_profile()
-    storyboard = json.loads(sb_path.read_text(encoding="utf-8"))
+    raw_storyboard = json.loads(sb_path.read_text(encoding="utf-8"))
+
+    # Validate storyboard schema & required image assets BEFORE overwriting any published reader files
+    val_res = validate_and_normalize_storyboard(
+        raw_storyboard,
+        project_dir=project_dir,
+        require_assets=strict_assets,
+    )
+    storyboard = val_res["normalized_storyboard"]
+
     title = storyboard.get("title", slug)
     subtitle = storyboard.get("subtitle", "An Interactive Landscape Picture Book")
     kicker = storyboard.get("kicker", "Interactive Bedtime Book")
@@ -2314,18 +2596,26 @@ def publish_book(
 
     paths_cfg = profile["paths"]
     chosen_port = int(port or paths_cfg["local_server_port"] or 8765)
+    lan_ip = _get_lan_ip()
+    lan_url = f"http://{lan_ip}:{chosen_port}/{slug}/"
+    qr_svg_path = project_dir / "qr-lan.svg"
+    _atomic_write_text(qr_svg_path, render_qr_svg(lan_url, title=f"Scan to read {title}"))
+    lan_qr_ascii = render_qr_ascii(lan_url)
 
     result: Dict[str, Any] = {
         "slug": slug,
         "bedtime_mode_default": is_bedtime,
+        "validation_warnings": val_res["warnings"],
         "workspace_dir": str(project_dir),
         "single_file_html": str(standalone_file_in_project),
         "single_file_html_copy": str(standalone_file_in_root),
         "file_url": f"file://{standalone_file_in_project}",
         "local_url": None,
         "local_single_file_url": None,
-        "lan_url": None,
-        "lan_single_file_url": None,
+        "lan_url": lan_url,
+        "lan_single_file_url": f"http://{lan_ip}:{chosen_port}/{slug}.html",
+        "lan_qr_svg_path": str(qr_svg_path),
+        "lan_qr_ascii": lan_qr_ascii,
         "custom_static_site_dir": None,
         "custom_live_url": None,
     }
@@ -2349,7 +2639,7 @@ def publish_book(
         target_dir = Path(os.path.expanduser(web_root_str)).resolve() / slug
         target_assets = target_dir / "assets"
         target_assets.mkdir(parents=True, exist_ok=True)
-        for fname in ("index.html", "styles.css", "script.js", f"{slug}.html"):
+        for fname in ("index.html", "styles.css", "script.js", f"{slug}.html", "qr-lan.svg"):
             src_f = project_dir / fname
             if src_f.exists():
                 shutil.copy2(src_f, target_dir / fname)
@@ -2443,6 +2733,10 @@ def main() -> None:
     p_sb.add_argument("--file", required=True, help="Path to storyboard JSON file")
     p_sb.add_argument("--no-ref-support", action="store_true", help="Indicate image tool cannot take image refs")
 
+    p_val = sub.add_parser("validate", help="Validate storyboard.json schema and optionally required assets")
+    p_val.add_argument("--slug", required=True)
+    p_val.add_argument("--require-assets", action="store_true", help="Also verify all required PNG/WebP assets exist")
+
     p_prev = sub.add_parser("preview", help="Generate HTML contact-sheet preview and alignment inspector")
     p_prev.add_argument("--slug", required=True)
 
@@ -2483,6 +2777,7 @@ def main() -> None:
     p_pub.add_argument("--slug", required=True)
     p_pub.add_argument("--no-local-server", action="store_true", help="Do not auto-start the local device HTTP server")
     p_pub.add_argument("--no-static", action="store_true", help="Skip copying to PUBLISH_WEB_ROOT even if set")
+    p_pub.add_argument("--allow-missing-assets", action="store_true", help="Build reader even if some image assets are missing")
     p_pub.add_argument("--bedtime-mode", choices=["true", "false"], default=None)
     p_pub.add_argument("--port", type=int, default=None, help="Override local HTTP server port")
     p_pub.add_argument("--web-root", default=None)
@@ -2574,6 +2869,11 @@ def main() -> None:
             supports_reference_images=not args.no_ref_support,
         )
         print(json.dumps(res, indent=2))
+    elif args.cmd == "validate":
+        res = validate_book_storyboard(args.slug, require_assets=args.require_assets)
+        print(json.dumps(res, indent=2))
+        if not res["valid"]:
+            sys.exit(1)
     elif args.cmd == "preview":
         res = generate_book_preview(args.slug)
         print(json.dumps(res, indent=2))
@@ -2630,6 +2930,7 @@ def main() -> None:
             web_root_override=args.web_root,
             base_url_override=args.base_url,
             bedtime_mode=bm,
+            strict_assets=not args.allow_missing_assets,
         )
         print(json.dumps(res, indent=2))
 

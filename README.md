@@ -117,32 +117,50 @@ Once connected, just ask your AI agent in plain English:
 
 ---
 
-## 📱 Reading on Your Phone, Tablet, or Computer
+## 📱 Reading on Your iPad, Phone, or Computer
 
-Out of the box, you have three easy ways to read your finished book:
-
-### 1. Open the Single-File HTML Book (`books/<slug>.html`)
-- Every book produces a completely self-contained `books/<slug>.html` file (~2–4 MB total, with all illustrations embedded).
-- **Double-click** `books/<slug>.html` on your computer to read in any browser.
-- **AirDrop, iMessage, WhatsApp, or email** `books/<slug>.html` to your phone or tablet and tap it to open full-screen in landscape mode!
-
-### 2. Read Over Local Wi-Fi (Built-In Local Server)
-- When `publish` runs, it automatically starts a lightweight local server on port `8765` (configurable via `LOCAL_SERVER_PORT` in `.env`):
-  - **On your computer**: `http://localhost:8765/<slug>/`
-  - **On your phone/tablet (same Wi-Fi)**: `http://<your-computer-lan-ip>:8765/<slug>/`
-- Need to restart the local server later? Run:
+### 1. Recommended for iPad & Phones: Scan the Local Wi-Fi QR Code
+When `publish` (or `preview`) runs, Bedtime Book Studio automatically:
+- Starts a lightweight local HTTP server on port `8765` (configurable via `LOCAL_SERVER_PORT` in `.env`).
+- Generates a scannable **QR code** (`books/<slug>/qr-lan.svg` + a terminal ASCII QR code in the CLI/MCP output) pointing to `http://<your-lan-ip>:8765/<slug>/`.
+- **Point your iPad or iPhone Camera app at the QR code** to open the book directly in **Mobile Safari** with full lift-the-flap touch/drag gestures, `🌙 Bedtime Mode`, and "Add to Home Screen" support.
+- Need to restart the local server or print the QR code later? Run:
   ```bash
   ./.venv/bin/python scripts/book_studio.py serve
   ```
 
-### 3. Optional Self-Hosting (Bring Your Own Web Server / Static Host)
-- **Single-File Upload**: Because `books/<slug>.html` has zero external dependencies, you can drag-and-drop it onto Netlify Drop, Cloudflare Pages, GitHub Pages, S3, or any static host.
-- **Automated Static Folder Copy**: If you run a local or remote web server directory (Nginx, Caddy, Tailscale Serve, etc.), set these optional variables in `.env`:
-  ```env
-  PUBLISH_WEB_ROOT="/var/www/my-site/books"
-  PUBLISH_BASE_URL="https://example.com/books"
-  ```
-  Whenever a book is published, Bedtime Book Studio will automatically copy the built book into `<PUBLISH_WEB_ROOT>/<slug>` and return `<PUBLISH_BASE_URL>/<slug>`.
+### 2. Single-File HTML Book (`books/<slug>.html`)
+- Every book also builds a completely self-contained `books/<slug>.html` file (~2–4 MB total, with all `.webp` illustrations, CSS, and JS embedded).
+- **On Mac / PC / Android**: Double-click `books/<slug>.html` to open in any desktop browser with full interactivity.
+- **Static Hosting**: Drag-and-drop `books/<slug>.html` onto Netlify Drop, Cloudflare Pages, GitHub Pages, S3, or any static host for a permanent HTTPS link you can text to family.
+
+### 📊 Verified iPad & Mobile Delivery Matrix
+
+> [!IMPORTANT]
+> **Why iPadOS Files / AirDrop `.html` attachments don't run Lift-the-Flap JavaScript:**
+> When you open a local `.html` file inside the iPadOS **Files**, **Mail**, or **Messages** app, iOS renders it inside a sandboxed **QuickLook preview** (`QLPreviewController`) that disables JavaScript and custom touch-drag events—and iPadOS does not provide an *"Open local file in Safari"* button from Files.
+> **For iPad and iPhone, always use Local Wi-Fi (QR code) or an HTTPS static host so the book opens in Mobile Safari.**
+
+| Delivery Method | Target Browser / Viewer | Lift-the-Flap Drag & Tap | Page Turns & Bedtime Mode | Offline Support |
+| :--- | :--- | :---: | :---: | :--- |
+| **1. Local Wi-Fi QR Code (`http://<lan-ip>:8765/<slug>/`)** | **iPadOS / iOS Mobile Safari** | ✅ Full | ✅ Full | Same Wi-Fi LAN (or cached tab) |
+| **2. Self-Hosted / Static Host (`https://.../<slug>.html`)** | **iPadOS / iOS Mobile Safari** | ✅ Full | ✅ Full | Cached after first load |
+| **3. Desktop Browser (`file:///.../books/<slug>.html`)** | **macOS / Windows / Linux Browser** | ✅ Full | ✅ Full | ✅ 100% Offline |
+| **4. AirDrop / iPadOS Files `.html` Attachment** | **iOS QuickLook (`QLPreviewController`)** | ⚠️ Disabled by iOS sandbox | ⚠️ Static layout only | Offline static view only |
+
+### 🔧 Local Wi-Fi & Port Troubleshooting
+- **iPad can't reach `http://<lan-ip>:8765`?**
+  1. Ensure your computer and iPad are on the **same Wi-Fi network** (avoid "Guest" Wi-Fi networks that enable AP client isolation).
+  2. If macOS/Linux firewall prompts to allow incoming connections for Python, click **Allow** (or open TCP port `8765` via `ufw allow 8765/tcp`).
+  3. If port `8765` is already in use, pass `--port 8888` to `publish` / `serve` or set `LOCAL_SERVER_PORT="8888"` in `.env`.
+
+### 3. Optional Custom Self-Hosting (`PUBLISH_WEB_ROOT`)
+If you run a local or remote web server directory (Nginx, Caddy, Tailscale Serve, etc.), set these optional variables in `.env`:
+```env
+PUBLISH_WEB_ROOT="/var/www/my-site/books"
+PUBLISH_BASE_URL="https://example.com/books"
+```
+Whenever a book is published, Bedtime Book Studio will automatically copy the built book into `<PUBLISH_WEB_ROOT>/<slug>` and return `<PUBLISH_BASE_URL>/<slug>`.
 
 ---
 
@@ -158,15 +176,16 @@ Out of the box, you have three easy ways to read your finished book:
 | `manage_identity_reference` | `book_studio.py identity-ref` | Add, relabel, or include/exclude (`--active false`) an individual reference photo |
 | `list_existing_books` | `book_studio.py list` | List all generated books, single-file HTML paths, preview sheets, and local URLs |
 | `create_book_project` | `book_studio.py init` | Scaffold a new book project with selected `cast_ids` and per-book `entity_overrides` |
-| `save_book_storyboard` | `book_studio.py storyboard` | Save `storyboard.json`, transformation mappings, and reference-chained `prompts.md` |
-| `generate_book_preview` | `book_studio.py preview` | Generate `preview.html` contact sheet & interactive Reality↔Imagination alignment inspector |
+| `save_book_storyboard` | `book_studio.py storyboard` | Validate & normalize `storyboard.json`, transformation mappings, and reference-chained `prompts.md` |
+| `validate_book_storyboard` | `book_studio.py validate` | Validate `storyboard.json` against canonical schema and optionally check required image assets (`--require-assets`) |
+| `generate_book_preview` | `book_studio.py preview` | Generate `preview.html` contact sheet, alignment inspector, and Local Wi-Fi QR code (`qr-lan.svg`) |
 | `ingest_generated_images` | `book_studio.py ingest` | Center-crop images to 4:3 (`1280x960`), export `.png` + `.webp`, and archive prior versions |
 | `revise_book_page` | `book_studio.py revise` | Revise one page (`text-only`, `reality-only`, `imaginary-only`, `paired-scene`) without touching approved art |
 | `approve_book_assets` | `book_studio.py approve` | Mark storyboard and/or specific illustration assets as approved |
 | `rollback_book_asset` | `book_studio.py rollback` | Restore a prior archived version of an illustration from `assets/history/` |
 | `get_revision_status` | *(in `revision_state.json`)* | Inspect approval state, version history, and revision log for a book |
-| `build_and_publish_book` | `book_studio.py publish` | Atomically build single-file `<slug>.html` + multi-file reader (with `🌙 Bedtime Mode`) and serve locally |
-| *(CLI helper)* | `book_studio.py serve` | Start or check the local device HTTP server for `BOOKS_OUTPUT_DIR` |
+| `build_and_publish_book` | `book_studio.py publish` | Validate assets, atomically build single-file `<slug>.html` + multi-file reader, generate `qr-lan.svg`, and serve locally |
+| *(CLI helper)* | `book_studio.py serve` | Start or check the local device HTTP server and print the Local Wi-Fi QR code |
 
 ---
 
