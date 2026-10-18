@@ -1,0 +1,33 @@
+{
+  "title": "Leo’s Cardboard Rocket",
+  "subtitle": "One brown box, two kitchen colanders, and a trip to the moon.",
+  "kicker": "A Lift-the-Flap Bedtime Adventure",
+  "end_kicker": "THREE, TWO, ONE... BLAST OFF!",
+  "end_subtitle": "Leo flew all the way to the moon and made it back in time for pajamas.",
+  "cover_prompt": "4:3 landscape children's picture-book cover illustration. In the living room, a 4-year-old child sits inside a cardboard moving box decorated with crayon stars, wearing a kitchen colander helmet, while a glowing silver moon rocket rises in a soft imagination cloud behind them. Clean hand-drawn ink linework, gentle watercolor fills, no text in image.",
+  "pages": [
+    {
+      "title": "The Living Room Launchpad",
+      "text": [
+        "Leo had a cardboard box. Leo had a colander helmet.",
+        "And Leo had a very important mission before bedtime."
+      ],
+      "real_prompt": "4:3 landscape illustration of Leo standing on the living room rug beside an ordinary brown cardboard box, a metal kitchen colander, and a small red wooden toy train. Clean hand-drawn ink linework, gentle watercolor fills, no text.",
+      "imaginary_prompt": "Matching 4:3 landscape angle: Commander Leo in a silver space helmet stands on a gleaming lunar launchpad beside a towering white-and-gold Saturn rocket, with a red rover parked nearby. Clean hand-drawn ink linework, gentle watercolor fills, no text.",
+      "imaginary_caption": "✨ Cape Living Room Launchpad!",
+      "flap_hint": "Lift the flap to see what the cardboard box really is!"
+    },
+    {
+      "title": "Countdown Check",
+      "text": [
+        "Leo climbed inside and tapped the cardboard flaps.",
+        "“Engines ready?” he whispered. THREE, TWO, ONE... BLAST OFF!"
+      ],
+      "refrain": "THREE, TWO, ONE... BLAST OFF!",
+      "real_prompt": "4:3 landscape illustration of Leo sitting inside the cardboard box on the living room rug, peering over the cardboard flap with a flashlight in hand. Clean hand-drawn ink linework, gentle watercolor fills, no text.",
+      "imaginary_prompt": "Matching 4:3 landscape angle: Commander Leo sits in the glowing cockpit of a starship as golden thrusters rumble beneath the rocket, lifting above fluffy clouds toward a starry sky. Clean hand-drawn ink linework, gentle watercolor fills, no text.",
+      "imaginary_caption": "✨ THREE, TWO, ONE... BLAST OFF!",
+      "flap_hint": "Lift the flap to launch into orbit!"
+    }
+  ]
+}

@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, viewport-fit=cover" />
+  <title>__BOOK_TITLE__</title>
+  <meta
+    name="description"
+    content="__BOOK_SUBTITLE__"
+  />
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="theme-color" content="#f3e6d3" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,800&family=Nunito:wght@500;700;800;900&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="./styles.css?v=1" />
+</head>
+<body>
+  <div class="app-shell">
+    <!-- Subtle orientation helper for narrow portrait phones -->
+    <div class="portrait-banner" id="portraitBanner" role="status">
+      <span class="portrait-banner-icon" aria-hidden="true">📱↻</span>
+      <span>Tip: Rotate sideways for full landscape storybook view</span>
+      <button type="button" class="portrait-banner-dismiss" id="dismissPortraitBanner" aria-label="Dismiss tip">✕</button>
+    </div>
+
+    <main class="reader" aria-label="__BOOK_TITLE__ interactive storybook">
+      <section class="book-stage">
+        <!-- Left & right page-turn touch zones -->
+        <button
+          type="button"
+          class="nav-paddle nav-paddle-prev"
+          id="prevBtn"
+          data-direction="prev"
+          aria-label="Previous page"
+          title="Previous page (Left Arrow)"
+        >
+          <span aria-hidden="true">‹</span>
+        </button>
+
+        <button
+          type="button"
+          class="nav-paddle nav-paddle-next"
+          id="nextBtn"
+          data-direction="next"
+          aria-label="Next page"
+          title="Next page (Right Arrow)"
+        >
+          <span aria-hidden="true">›</span>
+        </button>
+
+        <article class="page-card tone-light is-cover" id="pageCard" aria-live="polite">
+          <div class="celebration-layer" id="celebrationLayer" aria-hidden="true"></div>
+
+          <!-- Artwork & Interactive Lift-the-Flap Stage -->
+          <div class="page-image-frame" id="imageFrame">
+            <!-- Cover Title Overlay (shown on Cover only) -->
+            <div class="cover-overlay" id="coverOverlay">
+              <div class="cover-kicker" id="coverKicker">__BOOK_KICKER__</div>
+              <h1 class="cover-title" id="coverTitle">__BOOK_TITLE__</h1>
+              <p class="cover-subtitle" id="coverSubtitle">
+                __BOOK_SUBTITLE__
+              </p>
+              <button type="button" class="cover-start-btn" id="coverStartBtn">
+                Start Reading <span aria-hidden="true">→</span>
+              </button>
+            </div>
+
+            <!-- Decorative Final Celebration Spread -->
+            <div class="end-page-art" id="endPageArt" hidden aria-hidden="true">
+              <div class="end-page-sunburst" aria-hidden="true"></div>
+              <div class="end-page-stars" aria-hidden="true">
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+              <div class="end-page-copy">
+                <div class="end-page-kicker" id="endPageKicker">HOORAY!</div>
+                <div class="end-page-title" id="endPageTitle">The End</div>
+                <div class="end-page-subtitle" id="endPageSubtitle">
+                  __BOOK_SUBTITLE__
+                </div>
+                <button type="button" class="end-replay-btn" id="replayBtn">
+                  Read Again from Cover ↺
+                </button>
+              </div>
+            </div>
+
+            <!-- Cover single image -->
+            <img
+              id="coverImage"
+              class="cover-image"
+              src="./assets/cover.png?v=1"
+              alt="Cover: __BOOK_TITLE__"
+            />
+
+            <!-- Interactive Lift-the-Flap / Page Stage -->
+            <div class="flap-stage" id="flapStage" hidden>
+              <!-- UNDERNEATH: The Imaginary World -->
+              <div class="imaginary-scene" id="imaginaryScene">
+                <img
+                  id="imaginaryImage"
+                  class="scene-img imaginary-img"
+                  src="./assets/page-01-imaginary.png?v=1"
+                  alt="Imaginary scene underneath flap"
+                />
+                <div class="world-badge world-badge-imaginary" id="imaginaryBadge">
+                  <span class="badge-sparkle" aria-hidden="true">✨</span>
+                  <span id="imaginaryCaption">Imaginary World</span>
+                </div>
+              </div>
+
+              <!-- Dynamic cast shadow under the lifting flap -->
+              <div class="flap-cast-shadow" id="flapCastShadow" aria-hidden="true"></div>
+
+              <!-- TOP HINGED FLAP: The Real World Scene -->
+              <div
+                class="lift-flap"
+                id="liftFlap"
+                role="button"
+                tabindex="0"
+                aria-expanded="false"
+                aria-label="Lift flap to see the imaginary scene"
+              >
+                <div class="flap-hinge-stitch" aria-hidden="true"></div>
+
+                <!-- Front of Flap (Reality Scene) -->
+                <div class="flap-face flap-front">
+                  <img
+                    id="realityImage"
+                    class="scene-img reality-img"
+                    src="./assets/page-01-real.png?v=1"
+                    alt="Real-world scene"
+                  />
+                  <div class="world-badge world-badge-reality" id="realityBadge">
+                    <span aria-hidden="true">🏡</span>
+                    <span>Real World</span>
+                  </div>
+
+                  <!-- Die-Cut Cardboard Pull Tab on bottom of flap -->
+                  <div class="flap-pull-tab" id="flapPullTab">
+                    <span class="pull-tab-arrow" aria-hidden="true">▲</span>
+                    <span class="pull-tab-label">Lift Flap to Imagine!</span>
+                  </div>
+                </div>
+
+                <!-- Backside of Flap (visible when folded up) -->
+                <div class="flap-face flap-back" aria-hidden="true">
+                  <div class="flap-back-pattern">
+                    <span class="flap-back-icon">✨</span>
+                    <span class="flap-back-text" id="flapBackText">
+                      Imagination Revealed! (Tap or pull down to close flap)
+                    </span>
+                    <span class="flap-back-close-pill">▼ Close Flap</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Story Panel (Right Sidebar in Landscape / Bottom Panel in Portrait) -->
+          <aside class="page-copy tone-light" id="pageCopy" aria-label="Story text and controls">
+            <div class="page-header-row">
+              <span class="page-step-badge" id="pageLabel">Page 1</span>
+              <div class="header-actions">
+                <button
+                  type="button"
+                  class="mode-toggle-btn"
+                  id="focusTextBtn"
+                  aria-pressed="false"
+                  title="Toggle Focus Text Mode"
+                >
+                  Aa Text Only
+                </button>
+                <span class="page-progress" id="pageProgress">1 / 12</span>
+              </div>
+            </div>
+
+            <h2 class="page-scene-title" id="pageTitle">Page 1</h2>
+
+            <div class="story-text" id="pageText"></div>
+
+            <!-- Interactive Flap Callout Box inside Story Panel -->
+            <div class="flap-control-card" id="flapControlCard">
+              <div class="flap-status-row">
+                <span class="flap-state-indicator" id="flapStateIndicator">
+                  🏡 Showing: Real World
+                </span>
+              </div>
+              <p class="flap-hint-copy" id="flapHintCopy">
+                Lift the flap to see the imaginary scene!
+              </p>
+              <button type="button" class="flap-action-btn" id="flapActionBtn">
+                <span class="flap-btn-icon" id="flapBtnIcon" aria-hidden="true">🔼</span>
+                <span id="flapBtnText">Lift Up Flap</span>
+              </button>
+            </div>
+
+            <!-- Bottom Page Navigation Bar -->
+            <div class="story-nav-bar">
+              <button type="button" class="story-nav-btn" id="storyPrevBtn" aria-label="Previous page">
+                ← Back
+              </button>
+              <div class="page-dots" id="pageDots" role="tablist" aria-label="Jump to page"></div>
+              <button type="button" class="story-nav-btn story-nav-btn-primary" id="storyNextBtn" aria-label="Next page">
+                Next →
+              </button>
+            </div>
+          </aside>
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <script src="./script.js?v=1"></script>
+</body>
+</html>
