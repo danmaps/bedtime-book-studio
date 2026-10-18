@@ -39,6 +39,9 @@ var storyPrevBtn = document.getElementById("storyPrevBtn");
 var storyNextBtn = document.getElementById("storyNextBtn");
 var pageDots = document.getElementById("pageDots");
 var focusTextBtn = document.getElementById("focusTextBtn");
+var bedtimeModeBtn = document.getElementById("bedtimeModeBtn");
+var coverBedtimeBtn = document.getElementById("coverBedtimeBtn");
+var themeColorMeta = document.getElementById("themeColorMeta");
 
 var endPageArt = document.getElementById("endPageArt");
 var endPageKicker = document.getElementById("endPageKicker");
@@ -54,7 +57,59 @@ var currentIndex = 0;
 var isFlapOpen = false;
 var flapProgress = 0;
 var isFocusTextMode = false;
+var isBedtimeMode = false;
 var confettiTimer = null;
+
+function resolveInitialBedtimeMode() {
+  try {
+    var params = new URLSearchParams(window.location.search);
+    if (params.get("bedtime") === "1" || params.get("mode") === "bedtime") {
+      return true;
+    }
+    if (params.get("bedtime") === "0" || params.get("mode") === "celebrate") {
+      return false;
+    }
+    var stored = window.localStorage.getItem("bedtimeBookStudio_bedtimeMode");
+    if (stored === "true" || stored === "false") {
+      return stored === "true";
+    }
+  } catch (e) {
+    // Ignore storage or URL errors
+  }
+  return document.body.getAttribute("data-default-bedtime") === "true";
+}
+
+function setBedtimeMode(enabled, persist) {
+  isBedtimeMode = Boolean(enabled);
+  document.body.classList.toggle("is-bedtime-mode", isBedtimeMode);
+  if (bedtimeModeBtn) {
+    bedtimeModeBtn.setAttribute("aria-pressed", isBedtimeMode ? "true" : "false");
+    bedtimeModeBtn.textContent = isBedtimeMode ? "🌙 Bedtime On" : "🌙 Bedtime";
+  }
+  if (coverBedtimeBtn) {
+    coverBedtimeBtn.setAttribute("aria-pressed", isBedtimeMode ? "true" : "false");
+    coverBedtimeBtn.textContent = isBedtimeMode ? "🌙 Bedtime Mode: On" : "🌙 Bedtime Mode";
+  }
+  if (themeColorMeta) {
+    themeColorMeta.setAttribute("content", isBedtimeMode ? "#141923" : "#f3e6d3");
+  }
+  if (persist !== false) {
+    try {
+      window.localStorage.setItem("bedtimeBookStudio_bedtimeMode", isBedtimeMode ? "true" : "false");
+    } catch (e) {
+      // Ignore unavailable storage
+    }
+  }
+  if (pages.length > 0) {
+    updateNavigationBounds();
+    if (pages[currentIndex] && pages[currentIndex].kind === "the-end") {
+      renderEndPageCopy(pages[currentIndex]);
+      if (isBedtimeMode) {
+        clearCelebration();
+      }
+    }
+  }
+}
 
 function assetUrl(path) {
   if (!path) {
@@ -359,6 +414,48 @@ function updatePageDots() {
   }
 }
 
+function renderEndPageCopy(page) {
+  if (!page) {
+    return;
+  }
+  if (isBedtimeMode) {
+    endPageKicker.textContent = page.bedtimeKicker || "🌙 GOODNIGHT";
+    endPageTitle.textContent = page.bedtimeTitle || page.title || "The End";
+    endPageSubtitle.textContent =
+      page.bedtimeSubtitle ||
+      (page.text && page.text[0]) ||
+      "Time to close our eyes and drift off to sleep. Sweet dreams.";
+  } else {
+    endPageKicker.textContent = page.kicker || "HOORAY!";
+    endPageTitle.textContent = page.title || "The End";
+    endPageSubtitle.textContent = (page.text && page.text[0]) || "";
+  }
+}
+
+function updateNavigationBounds() {
+  var atStart = currentIndex <= 0;
+  var atEnd = currentIndex >= pages.length - 1;
+  var disablePrev = isBedtimeMode && atStart;
+  var disableNext = isBedtimeMode && atEnd;
+
+  if (prevBtn) {
+    prevBtn.disabled = disablePrev;
+    prevBtn.setAttribute("aria-disabled", disablePrev ? "true" : "false");
+  }
+  if (storyPrevBtn) {
+    storyPrevBtn.disabled = disablePrev;
+    storyPrevBtn.setAttribute("aria-disabled", disablePrev ? "true" : "false");
+  }
+  if (nextBtn) {
+    nextBtn.disabled = disableNext;
+    nextBtn.setAttribute("aria-disabled", disableNext ? "true" : "false");
+  }
+  if (storyNextBtn) {
+    storyNextBtn.disabled = disableNext;
+    storyNextBtn.setAttribute("aria-disabled", disableNext ? "true" : "false");
+  }
+}
+
 function renderPage(index, direction) {
   var page = pages[index];
   if (!page) {
@@ -380,6 +477,7 @@ function renderPage(index, direction) {
   flapStage.hidden = isCover || isEnd;
   endPageArt.hidden = !isEnd;
   endPageArt.classList.toggle("is-visible", isEnd);
+  endPageArt.setAttribute("aria-hidden", isEnd ? "false" : "true");
 
   pageCopy.hidden = isCover || isEnd;
   pageCopy.setAttribute("aria-hidden", isCover || isEnd ? "true" : "false");
@@ -411,9 +509,7 @@ function renderPage(index, direction) {
     imaginaryCaption.textContent = page.imaginaryCaption || "✨ Imaginary World";
     flapHintCopy.textContent = page.flapHint || "Lift the flap to see the imaginary scene!";
   } else {
-    endPageKicker.textContent = page.kicker || "HOORAY!";
-    endPageTitle.textContent = page.title;
-    endPageSubtitle.textContent = page.text[0] || "";
+    renderEndPageCopy(page);
   }
 
   pageLabel.textContent = page.label;
@@ -428,13 +524,16 @@ function renderPage(index, direction) {
   pageText.innerHTML = lines.join("");
 
   updatePageDots();
+  updateNavigationBounds();
 
   pageCard.classList.remove("turn-forward", "turn-backward");
-  void pageCard.offsetWidth;
-  pageCard.classList.add(direction === "prev" ? "turn-backward" : "turn-forward");
+  if (!isBedtimeMode) {
+    void pageCard.offsetWidth;
+    pageCard.classList.add(direction === "prev" ? "turn-backward" : "turn-forward");
+  }
 
   clearCelebration();
-  if (isEnd) {
+  if (isEnd && !isBedtimeMode) {
     void endPageArt.offsetWidth;
     endPageArt.classList.add("is-animating");
     launchCelebration();
@@ -444,6 +543,9 @@ function renderPage(index, direction) {
 }
 
 function changePage(nextIndex, direction) {
+  if (isBedtimeMode && (nextIndex < 0 || nextIndex >= pages.length)) {
+    return;
+  }
   var wrapped = getWrappedIndex(nextIndex);
   if (wrapped === currentIndex) {
     return;
@@ -472,7 +574,7 @@ coverStartBtn.addEventListener("click", function () {
 });
 
 replayBtn.addEventListener("click", function () {
-  changePage(0, "prev");
+  renderPage(0, "prev");
 });
 
 flapActionBtn.addEventListener("click", function () {
@@ -485,6 +587,18 @@ focusTextBtn.addEventListener("click", function () {
   focusTextBtn.textContent = isFocusTextMode ? "🎨 Show Artwork" : "Aa Text Only";
   pageCard.classList.toggle("is-focus-text", isFocusTextMode && currentIndex > 0 && currentIndex < pages.length - 1);
 });
+
+if (bedtimeModeBtn) {
+  bedtimeModeBtn.addEventListener("click", function () {
+    setBedtimeMode(!isBedtimeMode, true);
+  });
+}
+
+if (coverBedtimeBtn) {
+  coverBedtimeBtn.addEventListener("click", function () {
+    setBedtimeMode(!isBedtimeMode, true);
+  });
+}
 
 if (dismissPortraitBanner) {
   dismissPortraitBanner.addEventListener("click", function () {
@@ -513,9 +627,14 @@ document.addEventListener("keydown", function (event) {
       event.preventDefault();
       toggleFlap(false);
     }
+  } else if (event.key === "b" || event.key === "B") {
+    event.preventDefault();
+    setBedtimeMode(!isBedtimeMode, true);
   }
 });
 
+setBedtimeMode(resolveInitialBedtimeMode(), false);
 buildPageDots();
 setupFlapGestures();
 renderPage(0, "next");
+

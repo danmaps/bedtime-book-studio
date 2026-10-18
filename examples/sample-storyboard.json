@@ -1,33 +1,200 @@
 {
   "title": "Leo’s Cardboard Rocket",
-  "subtitle": "One brown box, two kitchen colanders, and a trip to the moon.",
+  "subtitle": "One brown box, two paper-plate dials, and a quiet trip to the moon.",
   "kicker": "A Lift-the-Flap Bedtime Adventure",
-  "end_kicker": "THREE, TWO, ONE... BLAST OFF!",
-  "end_subtitle": "Leo flew all the way to the moon and made it back in time for pajamas.",
-  "cover_prompt": "4:3 landscape children's picture-book cover illustration. In the living room, a 4-year-old child sits inside a cardboard moving box decorated with crayon stars, wearing a kitchen colander helmet, while a glowing silver moon rocket rises in a soft imagination cloud behind them. Clean hand-drawn ink linework, gentle watercolor fills, no text in image.",
-  "pages": [
+  "mode": "lift-the-flap",
+  "bedtime_mode": true,
+  "cast_ids": [
+    "char-leo",
+    "char-maya",
+    "pet-biscuit",
+    "pet-mochi",
+    "prop-cardboard-rocket"
+  ],
+  "identities": [
     {
-      "title": "The Living Room Launchpad",
-      "text": [
-        "Leo had a cardboard box. Leo had a colander helmet.",
-        "And Leo had a very important mission before bedtime."
-      ],
-      "real_prompt": "4:3 landscape illustration of Leo standing on the living room rug beside an ordinary brown cardboard box, a metal kitchen colander, and a small red wooden toy train. Clean hand-drawn ink linework, gentle watercolor fills, no text.",
-      "imaginary_prompt": "Matching 4:3 landscape angle: Commander Leo in a silver space helmet stands on a gleaming lunar launchpad beside a towering white-and-gold Saturn rocket, with a red rover parked nearby. Clean hand-drawn ink linework, gentle watercolor fills, no text.",
-      "imaginary_caption": "✨ Cape Living Room Launchpad!",
-      "flap_hint": "Lift the flap to see what the cardboard box really is!"
+      "id": "char-leo",
+      "kind": "main_character",
+      "name": "Leo",
+      "age_or_size": "4 years old, toddler height",
+      "appearance": "Light-medium skin, floppy curly brown hair, bright hazel eyes, warm gap-toothed smile",
+      "signature_outfit": "Red-and-white horizontal striped short-sleeve T-shirt and blue denim overalls",
+      "reality_description": "Wearing his red-and-white striped T-shirt and blue denim overalls on the living room rug",
+      "imaginary_transformation": "Commander Leo wearing a round glass-visor astronaut helmet over his red-and-white striped shirt and denim overalls"
     },
     {
-      "title": "Countdown Check",
-      "text": [
-        "Leo climbed inside and tapped the cardboard flaps.",
-        "“Engines ready?” he whispered. THREE, TWO, ONE... BLAST OFF!"
-      ],
-      "refrain": "THREE, TWO, ONE... BLAST OFF!",
-      "real_prompt": "4:3 landscape illustration of Leo sitting inside the cardboard box on the living room rug, peering over the cardboard flap with a flashlight in hand. Clean hand-drawn ink linework, gentle watercolor fills, no text.",
-      "imaginary_prompt": "Matching 4:3 landscape angle: Commander Leo sits in the glowing cockpit of a starship as golden thrusters rumble beneath the rocket, lifting above fluffy clouds toward a starry sky. Clean hand-drawn ink linework, gentle watercolor fills, no text.",
-      "imaginary_caption": "✨ THREE, TWO, ONE... BLAST OFF!",
-      "flap_hint": "Lift the flap to launch into orbit!"
+      "id": "char-maya",
+      "kind": "supporting_character",
+      "name": "Maya",
+      "age_or_size": "6 years old, half a head taller than Leo",
+      "appearance": "Light-medium skin, dark brown hair in two braided pigtails with yellow star clips, round glasses",
+      "signature_outfit": "Lavender knit sweater and navy leggings",
+      "reality_description": "Big sister Maya in her lavender sweater and round glasses holding a clipboard made from a cereal box",
+      "imaginary_transformation": "Flight Director Maya in a silver mission-control headset and star-badge jumpsuit holding a glowing holographic star chart"
+    },
+    {
+      "id": "pet-biscuit",
+      "kind": "pet",
+      "name": "Biscuit",
+      "age_or_size": "Small scruffy golden terrier dog, knee-high",
+      "appearance": "Wire-haired golden-tan fur, floppy ears, red collar with a brass bell",
+      "reality_description": "Biscuit the scruffy golden terrier sitting beside the rug wagging his tail",
+      "imaginary_transformation": "Astro-Hound Biscuit wearing a bubble space-pup helmet and a tiny silver jetpack"
+    },
+    {
+      "id": "pet-mochi",
+      "kind": "pet",
+      "name": "Mochi",
+      "age_or_size": "Plump tuxedo cat, smaller than Biscuit",
+      "appearance": "Sleek black fur with white paws, white chest bib, and green eyes",
+      "reality_description": "Mochi the black-and-white tuxedo cat curled up on the arm of the living room sofa",
+      "imaginary_transformation": "Lunar Observers' Cat Mochi floating weightlessly in a cozy zero-gravity pod above the sofa-crater"
+    },
+    {
+      "id": "prop-cardboard-rocket",
+      "kind": "prop",
+      "name": "Cardboard Box Rocket",
+      "age_or_size": "Large brown corrugated moving box, big enough for 4-year-old Leo to sit inside",
+      "appearance": "Brown cardboard box with taped triangle nose-cone flaps, crayon-drawn stars and red flame on the side, and two white paper plates taped to the front as ALT and SPEED dials",
+      "reality_description": "Brown corrugated cardboard moving box with taped nose-cone flaps, crayon stars, and two paper-plate dials on the living room rug",
+      "imaginary_transformation": "Gleaming riveted brass-and-silver lunar rocket ship with glowing analog altitude/speed gauges and warm golden thruster engines"
     }
-  ]
+  ],
+  "character_bible": "Maintain strict visual distinction between 4-year-old Leo (curly brown hair, red/white striped tee, denim overalls) and 6-year-old sister Maya (taller, braided pigtails, round glasses, lavender sweater), as well as between scruffy golden terrier Biscuit and black-and-white tuxedo cat Mochi. Hand-drawn warm ink outlines with soft watercolor washes, 4:3 horizontal landscape, no text in artwork.",
+  "cover": {
+    "prompt": "4:3 horizontal landscape children's picture-book cover illustration. In a warm living room, 4-year-old Leo (curly brown hair, red-and-white striped T-shirt, denim overalls) sits inside a brown cardboard moving box with taped nose-cone flaps and paper-plate dials, while a starry indigo moonlit sky swirls around the top of the room. Hand-drawn warm ink outlines and soft watercolor washes, no text or letters in the image."
+  },
+  "pages": [
+    {
+      "number": 1,
+      "badge": "Page 1",
+      "title": "The Living Room Launchpad",
+      "entity_ids": ["char-leo", "char-maya", "pet-biscuit", "prop-cardboard-rocket"],
+      "paragraphs": [
+        "Leo had a big brown cardboard box and two paper-plate dials.",
+        "Sister Maya checked her cereal-box clipboard while Biscuit wagged his tail."
+      ],
+      "flap_prompt": "Lift the flap to see Cape Living Room Launchpad!",
+      "imagination_label": "✨ Cape Living Room Launchpad!",
+      "shared_composition": {
+        "camera_angle": "Medium-wide eye-level 3/4 view from left",
+        "horizon_line": "Lower-middle third (62% from top, aligned with living room baseboard)",
+        "focal_subject_placement": "Cardboard box rocket at center-left (x: 38%, y: 62%) angled right; Maya standing at right (x: 72%, y: 58%); Biscuit at bottom-left (x: 18%, y: 76%)",
+        "character_pose": "Leo sitting upright inside the box gripping the top rim; Maya standing facing Leo holding clipboard up; Biscuit sitting looking up at Leo",
+        "key_shapes": [
+          "Triangular nose-cone flap pointing left",
+          "Two circular dials on the side facing viewer",
+          "Woven geometric rug border framing the bottom foreground"
+        ]
+      },
+      "transformation_mappings": [
+        {
+          "entity_id": "prop-cardboard-rocket",
+          "reality_element": "Brown corrugated cardboard box with taped triangle nose-cone flaps and two paper-plate dials",
+          "imaginary_element": "Gleaming riveted silver-and-brass lunar lander with glowing circular cockpit gauges",
+          "spatial_anchor": "Center-left foreground (x: 38%, y: 62%), angled identically"
+        },
+        {
+          "entity_id": "char-maya",
+          "reality_element": "Sister Maya in lavender sweater holding a cereal-box clipboard",
+          "imaginary_element": "Flight Director Maya in mission headset holding a glowing star-chart tablet on the launch gantry",
+          "spatial_anchor": "Right foreground (x: 72%, y: 58%)"
+        },
+        {
+          "entity_id": "pet-biscuit",
+          "reality_element": "Scruffy golden terrier Biscuit sitting on the living room rug",
+          "imaginary_element": "Astro-Hound Biscuit in a clear bubble helmet sitting on the launchpad deck",
+          "spatial_anchor": "Bottom-left foreground (x: 18%, y: 76%)"
+        }
+      ],
+      "reality_prompt": "4:3 horizontal landscape picture-book illustration. In a cozy living room, 4-year-old Leo (curly brown hair, red-and-white striped shirt, denim overalls) sits inside a brown cardboard moving box with taped nose-cone flaps and two paper-plate dials at center-left. Older sister Maya (6yo, braided pigtails, round glasses, lavender sweater) stands at right holding a cereal-box clipboard, while scruffy golden terrier Biscuit sits at bottom-left on the rug. Hand-drawn ink and watercolor, no text in image.",
+      "imaginary_prompt": "Matching 4:3 horizontal landscape composition: Commander Leo in an astronaut helmet sits in the exact same pose at center-left inside a gleaming riveted silver-and-brass lunar rocket with glowing circular gauges. At right stands Flight Director Maya with a mission headset and glowing star-chart on a launch gantry, and at bottom-left sits Astro-Hound Biscuit in a bubble space helmet. Hand-drawn ink and watercolor, no text in image."
+    },
+    {
+      "number": 2,
+      "badge": "Page 2",
+      "title": "Countdown Check",
+      "entity_ids": ["char-leo", "pet-mochi", "prop-cardboard-rocket"],
+      "paragraphs": [
+        "Leo turned the paper-plate dial to MOON.",
+        "“Engines ready?” he whispered. “Shhh-roar… up we go!”"
+      ],
+      "refrain": "Shhh-roar… up we go!",
+      "flap_prompt": "Lift the flap to glide into the starry sky!",
+      "imagination_label": "✨ Gliding Past the Sofa-Clouds!",
+      "shared_composition": {
+        "camera_angle": "Low-angle medium close-up looking slightly upward from the rug",
+        "horizon_line": "Sofa cushion line across middle (52% from top)",
+        "focal_subject_placement": "Leo in box at center (x: 48%, y: 60%); tuxedo cat Mochi on sofa arm at upper-right (x: 78%, y: 38%)",
+        "character_pose": "Leo reaching right hand to turn the front circular dial while looking up toward the window",
+        "key_shapes": [
+          "Box side profile tilted slightly upward",
+          "Rounded sofa arm at upper-right where Mochi is curled"
+        ]
+      },
+      "transformation_mappings": [
+        {
+          "entity_id": "prop-cardboard-rocket",
+          "reality_element": "Cardboard box on the rug with red crayon flame drawn on the side",
+          "imaginary_element": "Silver lunar craft lifting gently on a ribbon of warm golden starlight",
+          "spatial_anchor": "Center (x: 48%, y: 60%)"
+        },
+        {
+          "entity_id": "pet-mochi",
+          "reality_element": "Black-and-white tuxedo cat Mochi curled on the rounded sofa arm",
+          "imaginary_element": "Tuxedo cat Mochi curled inside a glowing crescent-cloud observatory pod",
+          "spatial_anchor": "Upper-right (x: 78%, y: 38%)"
+        }
+      ],
+      "reality_prompt": "4:3 horizontal landscape picture-book illustration. Low-angle view: 4-year-old Leo sits inside his cardboard box rocket in the center of the rug, turning the paper-plate dial with his right hand, while black-and-white tuxedo cat Mochi curls peacefully on the sofa arm at upper-right. Warm evening lamp light, ink and watercolor, no text in image.",
+      "imaginary_prompt": "Matching 4:3 horizontal landscape low-angle composition: Commander Leo in his silver rocket ship glides gently upward on a soft ribbon of golden starlight at center, turning the glowing brass dial, while tuxedo cat Mochi curls inside a floating cloud-observatory pod at upper-right against a deep indigo starry sky. Ink and watercolor, no text in image."
+    },
+    {
+      "number": 3,
+      "badge": "Page 3",
+      "title": "A Quiet Landing for Bedtime",
+      "entity_ids": ["char-leo", "pet-biscuit", "pet-mochi", "prop-cardboard-rocket"],
+      "paragraphs": [
+        "The moon was soft and silver, and the stars were getting sleepy.",
+        "Leo docked his cardboard rocket right beside his cozy bed. Goodnight, moon."
+      ],
+      "flap_prompt": "Lift the flap for one last peek at the sleepy moon!",
+      "imagination_label": "🌙 Quiet Moonlit Harbor",
+      "shared_composition": {
+        "camera_angle": "Wide, calm eye-level view bathed in soft bedside twilight",
+        "horizon_line": "Middle third (55% from top)",
+        "focal_subject_placement": "Cardboard box parked neatly at left (x: 28%, y: 65%); Leo tucked under quilt at right (x: 68%, y: 60%) with Biscuit and Mochi curled at the foot of the bed",
+        "character_pose": "Leo resting his head on the pillow with a peaceful sleepy smile, looking toward the window moonlight",
+        "key_shapes": [
+          "Parked box silhouette at left",
+          "Gentle curved quilt hill at right",
+          "Crescent moon glowing in the upper-left window"
+        ]
+      },
+      "transformation_mappings": [
+        {
+          "entity_id": "prop-cardboard-rocket",
+          "reality_element": "Cardboard box rocket parked neatly beside the bedroom rug",
+          "imaginary_element": "Silver moon-ship resting quietly on a soft velvet lunar hill with its lights dimmed for sleep",
+          "spatial_anchor": "Left foreground (x: 28%, y: 65%)"
+        },
+        {
+          "entity_id": "char-leo",
+          "reality_element": "Leo tucked under his cozy knit blanket in bed with Biscuit and Mochi at his feet",
+          "imaginary_element": "Leo tucked under a starry constellation quilt while a friendly crescent moon smiles outside the window",
+          "spatial_anchor": "Right middle-ground (x: 68%, y: 60%)"
+        }
+      ],
+      "reality_prompt": "4:3 horizontal landscape picture-book illustration. Calm, warm dim bedside lamp glow: the cardboard box rocket is parked neatly at left on the bedroom rug, while 4-year-old Leo is tucked peacefully into bed at right with golden terrier Biscuit and tuxedo cat Mochi curled asleep at the foot of the blanket. Soft moonlight through the window, ink and watercolor, no text in image.",
+      "imaginary_prompt": "Matching 4:3 horizontal landscape calm twilight composition: the silver lunar rocket rests quietly with dimmed lantern lights at left on a soft moonlit hill, while Leo is tucked under a glowing constellation quilt at right with Biscuit and Mochi sleeping peacefully beneath a friendly smiling crescent moon. Ink and watercolor, no text in image."
+    }
+  ],
+  "end": {
+    "kicker": "HOORAY!",
+    "title": "The End",
+    "subtitle": "Leo flew all the way to the moon and docked right on time for sleep.",
+    "bedtime_kicker": "🌙 GOODNIGHT, COMMANDER LEO",
+    "bedtime_title": "Sweet Dreams",
+    "bedtime_subtitle": "The rocket is parked, the stars are out, and it is time to drift off to sleep."
+  }
 }

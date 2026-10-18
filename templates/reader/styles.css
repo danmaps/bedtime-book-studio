@@ -1098,3 +1098,154 @@ img {
     transition-duration: 1ms !important;
   }
 }
+
+/* ============================================================
+   BEDTIME MODE (Subdued Twilight Theme, Calm Ending, Reduced Motion)
+   ============================================================ */
+.cover-actions-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.cover-bedtime-btn {
+  padding: 9px 14px;
+  font-size: 0.84rem;
+}
+
+.nav-paddle:disabled,
+.story-nav-btn:disabled {
+  opacity: 0.32;
+  cursor: not-allowed;
+  pointer-events: none;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+body.is-bedtime-mode {
+  --bg-top: #141923;
+  --bg-bottom: #0d1118;
+  --ink: #f4ead5;
+  --ink-soft: rgba(244, 234, 213, 0.78);
+  --paper: #1e2533;
+  --paper-warm: #252d3d;
+  --cardboard: #2c3548;
+  --shadow: 0 24px 60px rgba(0, 0, 0, 0.55);
+  background:
+    radial-gradient(circle at 18% 15%, rgba(246, 185, 36, 0.08), transparent 32%),
+    linear-gradient(180deg, var(--bg-top), var(--bg-bottom));
+}
+
+body.is-bedtime-mode .page-card {
+  border-color: rgba(244, 234, 213, 0.14);
+}
+
+body.is-bedtime-mode .page-image-frame {
+  background: #161b26;
+}
+
+body.is-bedtime-mode .cover-overlay {
+  background: rgba(26, 33, 46, 0.92);
+  border-color: rgba(246, 185, 36, 0.35);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+}
+
+body.is-bedtime-mode .cover-title,
+body.is-bedtime-mode .page-scene-title {
+  color: #fdf6e7;
+}
+
+body.is-bedtime-mode .page-step-badge {
+  background: rgba(246, 185, 36, 0.16);
+  color: #fcd34d;
+}
+
+body.is-bedtime-mode .mode-toggle-btn {
+  border-color: rgba(244, 234, 213, 0.25);
+  background: rgba(244, 234, 213, 0.08);
+  color: #f4ead5;
+}
+
+body.is-bedtime-mode .mode-toggle-btn[aria-pressed="true"] {
+  background: #f6b924;
+  border-color: #f6b924;
+  color: #1a1405;
+}
+
+body.is-bedtime-mode .story-refrain {
+  color: #fbbf24;
+}
+
+body.is-bedtime-mode .flap-control-card {
+  background: linear-gradient(180deg, #252e40 0%, #1d2433 100%);
+  border-color: rgba(246, 185, 36, 0.28);
+}
+
+body.is-bedtime-mode .flap-state-indicator {
+  color: #fcd34d;
+}
+
+body.is-bedtime-mode .story-nav-btn {
+  background: #262f42;
+  border-color: rgba(244, 234, 213, 0.2);
+  color: #f4ead5;
+}
+
+body.is-bedtime-mode .story-nav-btn-primary {
+  background: #3b593f;
+  border-color: #4f7754;
+  color: #f4ead5;
+}
+
+body.is-bedtime-mode .nav-paddle {
+  background: rgba(30, 37, 51, 0.85);
+  border-color: rgba(244, 234, 213, 0.2);
+  color: #f4ead5;
+}
+
+body.is-bedtime-mode .page-dot {
+  background: rgba(244, 234, 213, 0.25);
+}
+
+body.is-bedtime-mode .page-dot.is-active {
+  background: #fbbf24;
+}
+
+/* Calm twilight ending spread in Bedtime Mode (no sunburst, no confetti) */
+body.is-bedtime-mode .end-page-art {
+  background:
+    radial-gradient(circle at 50% 24%, rgba(251, 191, 36, 0.14), transparent 36%),
+    linear-gradient(180deg, #131824 0%, #1b2234 55%, #232b3e 100%);
+}
+
+body.is-bedtime-mode .end-page-sunburst {
+  display: none;
+}
+
+body.is-bedtime-mode .end-page-copy {
+  background: rgba(26, 33, 48, 0.92);
+  border: 1px solid rgba(251, 191, 36, 0.28);
+  box-shadow: 0 20px 44px rgba(0, 0, 0, 0.5);
+}
+
+body.is-bedtime-mode .end-page-kicker {
+  color: #fcd34d;
+  animation: none !important;
+}
+
+body.is-bedtime-mode .end-page-title {
+  color: #fdf6e7;
+}
+
+body.is-bedtime-mode .end-page-subtitle {
+  color: rgba(244, 234, 213, 0.84);
+}
+
+/* Bedtime mode reduces jarring motion automatically */
+body.is-bedtime-mode .page-card.turn-forward,
+body.is-bedtime-mode .page-card.turn-backward,
+body.is-bedtime-mode .flap-pull-tab {
+  animation: none !important;
+}
+

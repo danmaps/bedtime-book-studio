@@ -9,7 +9,7 @@
     content="__BOOK_SUBTITLE__"
   />
   <meta name="robots" content="noindex, nofollow" />
-  <meta name="theme-color" content="#f3e6d3" />
+  <meta name="theme-color" content="#f3e6d3" id="themeColorMeta" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="default" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -20,7 +20,7 @@
   />
   <link rel="stylesheet" href="./styles.css?v=1" />
 </head>
-<body>
+<body data-default-bedtime="__BEDTIME_MODE_DEFAULT__">
   <div class="app-shell">
     <!-- Subtle orientation helper for narrow portrait phones -->
     <div class="portrait-banner" id="portraitBanner" role="status">
@@ -66,12 +66,23 @@
               <p class="cover-subtitle" id="coverSubtitle">
                 __BOOK_SUBTITLE__
               </p>
-              <button type="button" class="cover-start-btn" id="coverStartBtn">
-                Start Reading <span aria-hidden="true">→</span>
-              </button>
+              <div class="cover-actions-row">
+                <button type="button" class="cover-start-btn" id="coverStartBtn">
+                  Start Reading <span aria-hidden="true">→</span>
+                </button>
+                <button
+                  type="button"
+                  class="mode-toggle-btn cover-bedtime-btn"
+                  id="coverBedtimeBtn"
+                  aria-pressed="false"
+                  title="Toggle Bedtime Mode (subdued colors, reduced motion, calm ending)"
+                >
+                  🌙 Bedtime Mode
+                </button>
+              </div>
             </div>
 
-            <!-- Decorative Final Celebration Spread -->
+            <!-- Final Spread (Celebration or Calm Bedtime Finish) -->
             <div class="end-page-art" id="endPageArt" hidden aria-hidden="true">
               <div class="end-page-sunburst" aria-hidden="true"></div>
               <div class="end-page-stars" aria-hidden="true">
@@ -171,6 +182,15 @@
             <div class="page-header-row">
               <span class="page-step-badge" id="pageLabel">Page 1</span>
               <div class="header-actions">
+                <button
+                  type="button"
+                  class="mode-toggle-btn"
+                  id="bedtimeModeBtn"
+                  aria-pressed="false"
+                  title="Toggle Bedtime Mode (subdued colors, reduced motion, calm ending)"
+                >
+                  🌙 Bedtime
+                </button>
                 <button
                   type="button"
                   class="mode-toggle-btn"

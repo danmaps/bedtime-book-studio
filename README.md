@@ -152,12 +152,20 @@ Out of the box, you have three easy ways to read your finished book:
 | :--- | :--- | :--- |
 | `get_onboarding_status` | `book_studio.py status` | Check if `.env` onboarding is complete and get onboarding instructions |
 | `configure_studio` | `book_studio.py onboard` / `configure` | Save character photo(s), text description, outfit, and defaults to `.env` |
-| `get_studio_profile` | `book_studio.py profile` | View the active character and studio configuration loaded from `.env` |
-| `list_existing_books` | `book_studio.py list` | List all generated books, single-file HTML paths, and local URLs |
-| `create_book_project` | `book_studio.py init` | Scaffold a new book project and copy character/prop reference photos |
-| `save_book_storyboard` | `book_studio.py storyboard` | Validate and save `storyboard.json` and generate `prompts.md` |
-| `ingest_generated_images` | `book_studio.py ingest` | Center-crop generated images to 4:3 (`1280x960`) and export `.png` + `.webp` |
-| `build_and_publish_book` | `book_studio.py publish` | Build single-file `<slug>.html` + multi-file reader and serve locally |
+| `get_studio_profile` | `book_studio.py profile` | View the active character, identities, and studio configuration |
+| `list_identities` | `book_studio.py identities` | List persistent characters, siblings, pets, and props (`local_profile/identities.json`) |
+| `upsert_identity` | `book_studio.py upsert-identity` | Create/update an entity with a stable ID (`char-...`, `pet-...`, `prop-...`) and reality vs. imaginary rules |
+| `manage_identity_reference` | `book_studio.py identity-ref` | Add, relabel, or include/exclude (`--active false`) an individual reference photo |
+| `list_existing_books` | `book_studio.py list` | List all generated books, single-file HTML paths, preview sheets, and local URLs |
+| `create_book_project` | `book_studio.py init` | Scaffold a new book project with selected `cast_ids` and per-book `entity_overrides` |
+| `save_book_storyboard` | `book_studio.py storyboard` | Save `storyboard.json`, transformation mappings, and reference-chained `prompts.md` |
+| `generate_book_preview` | `book_studio.py preview` | Generate `preview.html` contact sheet & interactive Reality↔Imagination alignment inspector |
+| `ingest_generated_images` | `book_studio.py ingest` | Center-crop images to 4:3 (`1280x960`), export `.png` + `.webp`, and archive prior versions |
+| `revise_book_page` | `book_studio.py revise` | Revise one page (`text-only`, `reality-only`, `imaginary-only`, `paired-scene`) without touching approved art |
+| `approve_book_assets` | `book_studio.py approve` | Mark storyboard and/or specific illustration assets as approved |
+| `rollback_book_asset` | `book_studio.py rollback` | Restore a prior archived version of an illustration from `assets/history/` |
+| `get_revision_status` | *(in `revision_state.json`)* | Inspect approval state, version history, and revision log for a book |
+| `build_and_publish_book` | `book_studio.py publish` | Atomically build single-file `<slug>.html` + multi-file reader (with `🌙 Bedtime Mode`) and serve locally |
 | *(CLI helper)* | `book_studio.py serve` | Start or check the local device HTTP server for `BOOKS_OUTPUT_DIR` |
 
 ---
