@@ -1,6 +1,11 @@
 # Bedtime Book Studio 📚✨
 
-**Turn a photo (or character description) and a bedtime story idea into an interactive, mobile-friendly landscape children's picture book in minutes.**
+**Turn a quick photo (or character description) and a bedtime story idea into an interactive, mobile-friendly landscape children's picture book in minutes.**
+
+| 1. Toss your agent a photo & a story idea... | 2. ...get an interactive bedtime book on your iPad! |
+| :---: | :---: |
+| ![Input photo of a child in a cardboard box rocket](docs/images/example-input-photo.jpg) | ![Finished bedtime book cover on an iPad in landscape mode](docs/images/example-ipad-book.jpg) |
+| *"Leo turns a cardboard moving box in the living room into a rocket ship landing on the moon."* | **Single-file `.html` book** + **instant local Wi-Fi hosting** with interactive **Lift-the-Flap** pages |
 
 **Bedtime Book Studio** is an open-source **Agent Skill** and **Model Context Protocol (MCP) server** that works with any AI coding/chat agent (Claude Code, Cursor, Antigravity, Windsurf, OpenClaw, etc.).
 
