@@ -51,6 +51,7 @@ def configure_studio(
     default_book_mode: Optional[str] = None,
     default_page_count: Optional[int] = None,
     books_output_dir: Optional[str] = None,
+    local_server_port: Optional[int] = None,
     publish_web_root: Optional[str] = None,
     publish_base_url: Optional[str] = None,
 ) -> str:
@@ -72,6 +73,7 @@ def configure_studio(
         default_book_mode=default_book_mode,
         default_page_count=default_page_count,
         books_output_dir=books_output_dir,
+        local_server_port=local_server_port,
         publish_web_root=publish_web_root,
         publish_base_url=publish_base_url,
     )
@@ -83,14 +85,14 @@ def get_studio_profile() -> str:
     """
     Return the active studio profile from `.env`, including main character details
     (name, age, text description, outfit, reference photo paths), supporting cast,
-    default art style, default book mode, and publishing paths.
+    default art style, default book mode, and local hosting paths.
     """
     return json.dumps(book_studio.get_studio_profile(), indent=2)
 
 
 @mcp.tool()
 def list_existing_books() -> str:
-    """List all bedtime picture-book projects in `BOOKS_OUTPUT_DIR` and their live URLs."""
+    """List all bedtime picture-book projects in `BOOKS_OUTPUT_DIR`, their single-file HTML path, and local URLs."""
     return json.dumps(book_studio.list_books(), indent=2)
 
 
@@ -148,19 +150,23 @@ def ingest_generated_images(slug: str, image_map: Dict[str, str]) -> str:
 @mcp.tool()
 def build_and_publish_book(
     slug: str,
+    serve_local: bool = True,
     deploy_static: bool = True,
-    deploy_docker: bool = False,
     port: Optional[int] = None,
 ) -> str:
     """
-    Step 4: Compile the mobile-friendly landscape book reader (`index.html`, `styles.css`, `script.js`),
-    and optionally publish to `PUBLISH_WEB_ROOT/<slug>` (`{PUBLISH_BASE_URL}/{slug}`) and/or a
-    local Docker container.
+    Step 4: Compile the book into:
+      1. A self-contained single-file HTML book (`<slug>.html` with all CSS, JS, and images embedded)
+         that can be opened directly in any browser or AirDropped/shared to a phone or tablet.
+      2. A multi-file web reader (`index.html`, `styles.css`, `script.js`, `assets/`).
+      3. By default (`serve_local=True`), hosts the book immediately on the local device at
+         `http://localhost:<port>/<slug>/` and `http://<lan-ip>:<port>/<slug>/` for phones on Wi-Fi.
+      4. Optionally copies to `PUBLISH_WEB_ROOT` if the user configured custom self-hosting in `.env`.
     """
     res = book_studio.publish_book(
         slug=slug,
+        serve_local=serve_local,
         deploy_static=deploy_static,
-        deploy_docker=deploy_docker,
         port=port,
     )
     return json.dumps(res, indent=2)

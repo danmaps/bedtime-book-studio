@@ -60,6 +60,9 @@ function assetUrl(path) {
   if (!path) {
     return "";
   }
+  if (path.indexOf("data:") === 0 || path.indexOf("http://") === 0 || path.indexOf("https://") === 0) {
+    return path;
+  }
   return path + "?v=" + ASSET_VERSION;
 }
 

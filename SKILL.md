@@ -1,11 +1,15 @@
 ---
 name: bedtime-book-studio
-description: Create, illustrate, and publish mobile-friendly landscape children's picture books (including interactive Lift-the-Flap Reality-vs-Imagination books and standard step-by-step picture books) from a user photo and/or text description and story idea. Includes built-in first-time onboarding stored in a local `.env` file.
+description: Create, illustrate, and publish mobile-friendly landscape children's picture books (including interactive Lift-the-Flap Reality-vs-Imagination books and standard step-by-step picture books) from a user photo and/or text description and story idea. Outputs a self-contained single-file HTML book and hosts locally on the user's device by default.
 ---
 
 # Bedtime Book Studio (`bedtime-book-studio`)
 
 Turn a photo and/or character description plus a bedtime story idea into a fully illustrated, mobile-friendly landscape web picture book in minutes.
+
+By default, every book is compiled into:
+1. **A self-contained Single-File HTML Book (`<slug>.html`)**: All HTML, CSS, JavaScript, and WebP illustrations are embedded inside one portable `.html` file that opens directly in any browser, can be AirDropped/texted/emailed to a phone or tablet, or dropped onto any static host.
+2. **Local Device Hosting (`http://localhost:8765/<slug>/` & `http://<lan-ip>:8765/<slug>/`)**: Automatically served locally on the user's machine so they can open it immediately on their computer or on a phone/tablet connected to the same Wi-Fi.
 
 ---
 
@@ -30,9 +34,6 @@ Walk the user through a quick, friendly onboarding conversation (or ask them to 
    - `default_book_mode`: `"lift-the-flap"` (Reality scene on top flap, lifts up to reveal the Imaginary world underneath) or `"standard"` (single illustration per page).
    - `default_page_count`: typically `10`–`16` pages (default `12`).
    - `default_art_style`: defaults to warm hand-drawn ink outlines with soft watercolor fills.
-5. **Publishing Defaults (Optional)**:
-   - `books_output_dir`: local directory for book workspaces (defaults to `./books`).
-   - `publish_web_root` & `publish_base_url`: optional static site directory and base URL for one-command unlisted web deployment.
 
 Save these settings to the local `.env` file via:
 - **MCP tool**: `configure_studio(...)`
@@ -92,13 +93,16 @@ Write the complete storyboard JSON (see `examples/sample-storyboard.json` for a 
 
 ---
 
-## Step 4: Build & Publish the Reader (`build_and_publish_book`)
+## Step 4: Build & Host Locally (`build_and_publish_book`)
 
-Compile the mobile-friendly landscape book reader (`index.html`, `styles.css`, `script.js`):
-- **Via MCP tool**: `build_and_publish_book(slug, deploy_static=True, deploy_docker=False)`
+Compile the book into a **single-file standalone HTML book** (`<slug>.html`) and start the local device server:
+- **Via MCP tool**: `build_and_publish_book(slug, serve_local=True)`
 - **Via CLI**:
   ```bash
   python3 scripts/book_studio.py publish --slug "leos-cardboard-rocket"
   ```
-- If `PUBLISH_WEB_ROOT` and `PUBLISH_BASE_URL` are configured in `.env`, the book is immediately copied to `<PUBLISH_WEB_ROOT>/<slug>` and available at `<PUBLISH_BASE_URL>/<slug>`.
-- Otherwise, preview locally right away with the returned `local_preview_command` (`python3 -m http.server 8080 --directory <workspace_dir>`) or pass `--docker` to launch a local Nginx container.
+- **Share with the user**:
+  1. `single_file_html`: Path to the standalone `<slug>.html` file (can be opened directly or AirDropped/sent to a phone or tablet).
+  2. `local_url`: `http://localhost:8765/<slug>/` on the user's computer.
+  3. `lan_url`: `http://<lan-ip>:8765/<slug>/` for phones/tablets on the same Wi-Fi.
+  4. `custom_live_url`: Returned automatically if the user configured optional `PUBLISH_WEB_ROOT` & `PUBLISH_BASE_URL` in `.env`.

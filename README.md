@@ -1,58 +1,57 @@
 # Bedtime Book Studio 📚✨
 
-**Bedtime Book Studio** is an open-source Agent Skill and **Model Context Protocol (MCP) server** that lets you toss any AI coding agent (Claude Code, Antigravity, Cursor, OpenClaw, Windsurf, etc.) a photo and/or character description plus a bedtime story idea—and get a fully illustrated, mobile-friendly **landscape children's picture book** in minutes.
+**Turn a photo (or character description) and a bedtime story idea into an interactive, mobile-friendly landscape children's picture book in minutes.**
 
-It supports two interactive book formats out of the box:
-1. **Lift-the-Flap Mode (`lift-the-flap`)**: Every story page displays the everyday **Reality** scene on a tactile, hinged cardboard flap; kids can tap or drag the flap upward to reveal the **Imaginary** world underneath!
-2. **Standard Picture-Book Mode (`standard`)**: Classic single-illustration landscape spreads with big read-aloud typography, Focus Text mode, and a celebratory "Hooray! The End" confetti finale.
+**Bedtime Book Studio** is an open-source **Agent Skill** and **Model Context Protocol (MCP) server** that works with any AI coding/chat agent (Claude Code, Cursor, Antigravity, Windsurf, OpenClaw, etc.).
 
----
-
-## ✨ Features
-
-- **Guided First-Time Onboarding (`.env`)**:
-  - Set up your main character once—using **reference photo(s)**, a **text appearance description**, or **both**—along with their signature outfit, supporting cast (family, pets), favorite recurring toys/props, art style, and default page count.
-  - Stored locally in a gitignored `.env` file (and `local_profile/references/` for copied reference photos) so your personal photos and family details never leave your machine or get committed to git.
-  - Works both **interactively in the terminal** (`./setup.sh` or `python3 scripts/book_studio.py onboard`) and **conversationally through your AI agent** (`get_onboarding_status` -> `configure_studio`).
-- **Mobile-First Landscape Web Reader**:
-  - Side-by-side artwork stage + read-aloud story panel designed for phones and tablets held horizontally at bedtime.
-  - Smooth 3D CSS/pointer-drag **Lift-the-Flap** mechanics (`Space` / `F` shortcut, tap button, or drag up/down).
-  - Keyboard navigation (`←` / `→`), swipe gestures, Focus Text toggle, image preloading, and a confetti celebration finale.
-- **Image Normalization & WebP Pipeline**:
-  - Automatically center-crops generated illustrations to `1280x960` (4:3 landscape) and exports both `.png` and optimized `.webp` assets.
-- **Flexible Publishing**:
-  - Preview locally with one command, spin up a self-contained Nginx Docker container, or automatically copy to a static website folder for instant unlisted sharing (`https://yourdomain.com/<book-slug>`).
+When your book finishes building, you get:
+1. **A Single-File HTML Picture Book (`books/<slug>.html`)**:
+   Every illustration (`.webp`), stylesheet, and interactive page-turn/flap script is bundled into **one self-contained `.html` file**. You can double-click it to open in any browser, AirDrop/text/email it straight to your phone or iPad for bedtime, or drop that single file onto any static web host.
+2. **Instant Local Hosting on Your Device**:
+   By default, Bedtime Book Studio automatically serves your books locally on your machine (`http://localhost:8765/<slug>/`) and prints your device's **local Wi-Fi URL** (`http://<your-lan-ip>:8765/<slug>/`) so you can open the book immediately on a phone or tablet on the same Wi-Fi network.
+3. **Optional Custom Self-Hosting**:
+   If you run your own web server or static site folder, you can optionally set `PUBLISH_WEB_ROOT` and `PUBLISH_BASE_URL` in `.env` to auto-copy new books to your server.
 
 ---
 
-## 🚀 Quick Start & Onboarding
+## ✨ Two Interactive Book Modes
 
-### 1. Clone & Run Setup
+1. **Lift-the-Flap Mode (`lift-the-flap` — Default)**:
+   - Every story page shows the everyday **Reality** scene on a tactile, stitched cardboard flap.
+   - Kids can tap the button, press `Space`/`F`, or drag the flap upward with their finger to lift it in 3D and reveal the **Imaginary** world underneath!
+2. **Standard Picture-Book Mode (`standard`)**:
+   - Classic single-illustration landscape spreads with big read-aloud typography, a `Aa Text Only` focus mode, and a celebratory *"Hooray! The End"* confetti finale.
+
+---
+
+## 🚀 Step-by-Step Setup (2 Minutes)
+
+### Prerequisites
+- **Python 3.10+**
+- Any AI agent that supports **MCP** or **Skills** (and has access to an image generation tool/subagent).
+
+### Step 1: Clone the Repo & Run Setup
 ```bash
 git clone https://github.com/danmaps/bedtime-book-studio.git
 cd bedtime-book-studio
 ./setup.sh
 ```
 
-`./setup.sh` will:
-1. Create a local Python virtual environment (`.venv`) and install `Pillow` + `mcp`.
-2. Launch the **interactive onboarding wizard** (`python3 scripts/book_studio.py onboard`), walking you through:
-   - **Main character details**: Name, age, reference photo path(s) (optional), text description (optional if photo provided, or use both!), and default outfit.
-   - **Supporting characters & favorite props**: Pets, siblings, parents, or favorite toys to keep consistent across books.
-   - **Book & art style defaults**: `lift-the-flap` vs. `standard` mode, default page count, and illustration style prompt.
-   - **Publishing defaults**: Local output folder (`./books`) and optional static web root / base URL.
-3. Save your configuration to `.env` (gitignored) and print ready-to-paste MCP & Skill config snippets.
+What `./setup.sh` does:
+1. Creates a local Python virtual environment (`.venv/`) and installs `Pillow` + `mcp`.
+2. Launches the **interactive onboarding wizard** to set up your main character and defaults, saving everything locally in `.env` (which is gitignored).
+3. Prints the exact copy-paste config snippet for your AI agent.
 
-> **Prefer to onboard through your AI agent instead?**
-> Skip the terminal wizard with `./setup.sh --skip-onboard`. The first time you ask your agent to make a book, it will call `get_onboarding_status()`, see that onboarding isn't complete yet, ask you for your character's photo/description and preferences in chat, and save them to `.env` via `configure_studio()`.
+> **Tip:** Want your AI agent to interview you in chat instead of using the terminal wizard? Run `./setup.sh --skip-onboard`. The first time you ask your agent to make a book, it will detect that `.env` isn't configured yet and walk you through onboarding right in chat!
 
 ---
 
-## 🔌 Connecting to Your AI Agent
+### Step 2: Connect Your AI Agent
 
-### Option A: MCP Server (Claude Code, Antigravity, Cursor, Windsurf)
+Choose **MCP Server**, **Agent Skill**, or both:
 
-Add `bedtime-book-studio` to your MCP configuration file (e.g., `~/.claude.json`, `~/.gemini/config/mcp_config.json`, or `.cursor/mcp.json`):
+#### Option A: Connect via MCP (Claude Code, Cursor, Antigravity, Windsurf)
+Add `bedtime-book-studio` to your agent's MCP config file (for example `~/.claude.json`, `.cursor/mcp.json`, or `~/.gemini/config/mcp_config.json`):
 
 ```json
 {
@@ -66,51 +65,102 @@ Add `bedtime-book-studio` to your MCP configuration file (e.g., `~/.claude.json`
   }
 }
 ```
+*(Note: `./setup.sh` prints this exact JSON block with your real absolute paths filled in!)*
 
-### Option B: Agent Skill (`SKILL.md`)
-
-Symlink the repository into your agent's skills directory:
+#### Option B: Connect via Agent Skill (`SKILL.md`)
+Symlink the repo into your agent's skills folder:
 
 ```bash
 mkdir -p ~/.agents/skills
-ln -sfn /absolute/path/to/bedtime-book-studio ~/.agents/skills/bedtime-book-studio
+ln -sfn "$(pwd)" ~/.agents/skills/bedtime-book-studio
 ```
 
 ---
 
-## 🛠️ Available MCP Tools & CLI Commands
+### Step 3: Onboard Your Main Character (Photo and/or Text)
 
-| MCP Tool | CLI Command | Description |
-| :--- | :--- | :--- |
-| `get_onboarding_status` | `book_studio.py status` | Check if `.env` onboarding is complete and retrieve onboarding instructions |
-| `configure_studio` | `book_studio.py configure` / `onboard` | Save main character photo(s), text description, outfit, and defaults to `.env` |
-| `get_studio_profile` | `book_studio.py profile` | View the active character and studio configuration loaded from `.env` |
-| `list_existing_books` | `book_studio.py list` | List all generated books and their workspace/live paths |
-| `create_book_project` | `book_studio.py init` | Scaffold a new book project and copy character/prop reference photos |
-| `save_book_storyboard` | `book_studio.py storyboard` | Validate and save `storyboard.json` and generate `prompts.md` |
-| `ingest_generated_images` | `book_studio.py ingest` | Center-crop generated images to 4:3 (`1280x960`) and export `.png` + `.webp` |
-| `build_and_publish_book` | `book_studio.py publish` | Build the interactive landscape reader and deploy to static web root or Docker |
+During onboarding (via `./setup.sh`, `python3 scripts/book_studio.py onboard`, or in chat with your agent), you configure your default character once:
+
+- **Name & Age**: e.g. `Leo`, age `4`
+- **Visual Reference (Photo, Text, or Both)**:
+  - **Photo(s)**: Provide path(s) to 1 or more photos of your main character. They are copied into `./local_profile/references/` (gitignored) and automatically included as visual references in future books.
+  - **Text Description & Outfit**: Describe their hair, eyes, skin tone, and signature outfit (e.g., *"4-year-old with curly brown hair, wearing a red striped T-shirt and denim overalls"*). You can use text alone or combine it with reference photos for rock-solid consistency.
+- **Supporting Cast & Favorite Toys (Optional)**: Pets, siblings, parents, or favorite real-world toys that frequently appear in bedtime stories.
+- **Book Defaults**: `lift-the-flap` vs. `standard` mode, default page count (`12`), and default illustration style.
+
+All of these settings live in your local `.env` file. You can re-run onboarding anytime:
+```bash
+./.venv/bin/python scripts/book_studio.py onboard
+```
 
 ---
 
-## 📖 Example Prompt at Bedtime
+## 📖 Making a Bedtime Book
 
-Once connected, just tell your agent:
+Once connected, just ask your AI agent in plain English:
 
-> *"Use bedtime-book-studio to make a new 12-page lift-the-flap bedtime book! Here's a photo of our cardboard box rocket (`/path/to/box.jpg`). The story is about turning a moving box in the living room into a lunar lander on the moon."*
+> *"Make a new lift-the-flap bedtime book! Here's a photo of our cardboard box (`/path/to/box.jpg`). The story is about turning a cardboard moving box in the living room into a rocket ship landing on the moon."*
 
-Your agent will:
-1. Load your main character's photo/description and style defaults from `.env`.
-2. Scaffold the book workspace and write a 12-page Reality-vs-Imagination storyboard (`storyboard.json`).
-3. Generate the cover and page illustrations with character continuity locked.
-4. Ingest the images into `.png` + `.webp` and compile the interactive lift-the-flap web reader!
+### What Happens Behind the Scenes:
+1. **`create_book_project`**: Scaffolds `books/<slug>/` and copies your default character photo(s) from `.env` plus any new prop photo(s).
+2. **`save_book_storyboard`**: Writes `storyboard.json` and `prompts.md` with locked character continuity and matching **Reality** + **Imaginary** scene prompts for every page.
+3. **`ingest_generated_images`**: Your agent generates the illustrations, and Bedtime Book Studio center-crops every image to `1280x960` (4:3 landscape) and exports `.png` + `.webp`.
+4. **`build_and_publish_book`**:
+   - Generates the **single-file standalone HTML book** at `books/<slug>.html` (and `books/<slug>/<slug>.html`).
+   - Generates the standard multi-file folder at `books/<slug>/index.html`.
+   - Starts the **local device web server** so you can read immediately!
+
+---
+
+## 📱 Reading on Your Phone, Tablet, or Computer
+
+Out of the box, you have three easy ways to read your finished book:
+
+### 1. Open the Single-File HTML Book (`books/<slug>.html`)
+- Every book produces a completely self-contained `books/<slug>.html` file (~2–4 MB total, with all illustrations embedded).
+- **Double-click** `books/<slug>.html` on your computer to read in any browser.
+- **AirDrop, iMessage, WhatsApp, or email** `books/<slug>.html` to your phone or tablet and tap it to open full-screen in landscape mode!
+
+### 2. Read Over Local Wi-Fi (Built-In Local Server)
+- When `publish` runs, it automatically starts a lightweight local server on port `8765` (configurable via `LOCAL_SERVER_PORT` in `.env`):
+  - **On your computer**: `http://localhost:8765/<slug>/`
+  - **On your phone/tablet (same Wi-Fi)**: `http://<your-computer-lan-ip>:8765/<slug>/`
+- Need to restart the local server later? Run:
+  ```bash
+  ./.venv/bin/python scripts/book_studio.py serve
+  ```
+
+### 3. Optional Self-Hosting (Bring Your Own Web Server / Static Host)
+- **Single-File Upload**: Because `books/<slug>.html` has zero external dependencies, you can drag-and-drop it onto Netlify Drop, Cloudflare Pages, GitHub Pages, S3, or any static host.
+- **Automated Static Folder Copy**: If you run a local or remote web server directory (Nginx, Caddy, Tailscale Serve, etc.), set these optional variables in `.env`:
+  ```env
+  PUBLISH_WEB_ROOT="/var/www/my-site/books"
+  PUBLISH_BASE_URL="https://example.com/books"
+  ```
+  Whenever a book is published, Bedtime Book Studio will automatically copy the built book into `<PUBLISH_WEB_ROOT>/<slug>` and return `<PUBLISH_BASE_URL>/<slug>`.
+
+---
+
+## 🛠️ CLI & MCP Tool Reference
+
+| MCP Tool | CLI Command | Description |
+| :--- | :--- | :--- |
+| `get_onboarding_status` | `book_studio.py status` | Check if `.env` onboarding is complete and get onboarding instructions |
+| `configure_studio` | `book_studio.py onboard` / `configure` | Save character photo(s), text description, outfit, and defaults to `.env` |
+| `get_studio_profile` | `book_studio.py profile` | View the active character and studio configuration loaded from `.env` |
+| `list_existing_books` | `book_studio.py list` | List all generated books, single-file HTML paths, and local URLs |
+| `create_book_project` | `book_studio.py init` | Scaffold a new book project and copy character/prop reference photos |
+| `save_book_storyboard` | `book_studio.py storyboard` | Validate and save `storyboard.json` and generate `prompts.md` |
+| `ingest_generated_images` | `book_studio.py ingest` | Center-crop generated images to 4:3 (`1280x960`) and export `.png` + `.webp` |
+| `build_and_publish_book` | `book_studio.py publish` | Build single-file `<slug>.html` + multi-file reader and serve locally |
+| *(CLI helper)* | `book_studio.py serve` | Start or check the local device HTTP server for `BOOKS_OUTPUT_DIR` |
 
 ---
 
 ## 🔒 Privacy by Design
 
-- `.env`, `local_profile/`, and `books/` are all listed in `.gitignore`.
-- Your personal reference photos, character names, and generated family books stay strictly on your local filesystem.
+- `.env`, `local_profile/`, and `books/` are all gitignored in [`.gitignore`](.gitignore).
+- Your personal family photos, character names, and generated books never leave your device unless you choose to share them.
 
 ---
 

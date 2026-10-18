@@ -3,25 +3,29 @@
 Bedtime Book Studio — Core Engine & Onboarding CLI
 
 Manages local `.env` user onboarding (main character photo and/or text description,
-outfit, supporting cast, art style, and hosting defaults) and executes the end-to-end
+outfit, supporting cast, art style, and defaults) and executes the end-to-end
 children's picture-book pipeline:
   0. onboard / configure — Interactive or agent-driven setup stored in local `.env`
   1. init                — Scaffold a new book workspace & copy reference photos
   2. storyboard          — Save `storyboard.json` & generate `prompts.md`
   3. ingest              — Normalize, crop (4:3), and convert art to `.png` + `.webp`
-  4. publish             — Build mobile-friendly landscape reader & deploy
+  4. publish             — Build a self-contained single-file HTML book (`<slug>.html`)
+                           plus standard web assets, and host locally on the user's device
 """
 
 from __future__ import annotations
 
 import argparse
+import base64
 import html
 import json
 import os
 import re
 import shutil
+import socket
 import subprocess
 import sys
+import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -52,10 +56,9 @@ DEFAULT_ENV_VALUES: Dict[str, str] = {
     "DEFAULT_BOOK_MODE": "lift-the-flap",
     "DEFAULT_PAGE_COUNT": "12",
     "BOOKS_OUTPUT_DIR": "./books",
+    "LOCAL_SERVER_PORT": "8765",
     "PUBLISH_WEB_ROOT": "",
     "PUBLISH_BASE_URL": "",
-    "DOCKER_BIND_IP": "127.0.0.1",
-    "DOCKER_START_PORT": "3020",
 }
 
 
@@ -183,10 +186,9 @@ def get_studio_profile() -> Dict[str, Any]:
         },
         "paths": {
             "books_output_dir": str(books_dir),
+            "local_server_port": int(env.get("LOCAL_SERVER_PORT", "8765") or 8765),
             "publish_web_root": web_root,
             "publish_base_url": env.get("PUBLISH_BASE_URL", "").rstrip("/"),
-            "docker_bind_ip": env.get("DOCKER_BIND_IP", "127.0.0.1"),
-            "docker_start_port": int(env.get("DOCKER_START_PORT", "3020") or 3020),
         },
     }
 
@@ -232,13 +234,11 @@ def configure_studio(
     default_book_mode: Optional[str] = None,
     default_page_count: Optional[int] = None,
     books_output_dir: Optional[str] = None,
+    local_server_port: Optional[int] = None,
     publish_web_root: Optional[str] = None,
     publish_base_url: Optional[str] = None,
-    docker_bind_ip: Optional[str] = None,
-    docker_start_port: Optional[int] = None,
 ) -> Dict[str, Any]:
     """Save character details, reference photos, and studio defaults to the local `.env` file."""
-    current = parse_env_file(ENV_FILE)
     updates: Dict[str, Any] = {"ONBOARDING_COMPLETE": "true"}
 
     if main_character_name is not None:
@@ -263,14 +263,12 @@ def configure_studio(
         updates["DEFAULT_PAGE_COUNT"] = str(default_page_count)
     if books_output_dir is not None:
         updates["BOOKS_OUTPUT_DIR"] = books_output_dir
+    if local_server_port is not None:
+        updates["LOCAL_SERVER_PORT"] = str(local_server_port)
     if publish_web_root is not None:
         updates["PUBLISH_WEB_ROOT"] = publish_web_root
     if publish_base_url is not None:
         updates["PUBLISH_BASE_URL"] = publish_base_url.rstrip("/")
-    if docker_bind_ip is not None:
-        updates["DOCKER_BIND_IP"] = docker_bind_ip
-    if docker_start_port is not None:
-        updates["DOCKER_START_PORT"] = str(docker_start_port)
 
     copied_photos: List[str] = []
     if main_character_photos is not None:
@@ -373,16 +371,13 @@ def run_interactive_onboarding() -> Dict[str, Any]:
 
     art_style = _prompt_input("Default illustration style", defaults["art_style"])
 
-    print("\n--- 4. Output & Optional Hosting Defaults ---")
-    books_dir = _prompt_input("Directory where new book projects are saved", paths["books_output_dir"] or "./books")
-    web_root = _prompt_input(
-        "Optional static website root folder for instant unlisted publishing (or leave blank)",
-        paths["publish_web_root"],
-    )
-    base_url = _prompt_input(
-        "Optional public base URL matching your web root (e.g. https://example.com, or leave blank)",
-        paths["publish_base_url"],
-    )
+    print("\n--- 4. Local Output & Hosting Defaults ---")
+    books_dir = _prompt_input("Directory where generated books are saved", paths["books_output_dir"] or "./books")
+    port_str = _prompt_input("Local device web server port", str(paths["local_server_port"] or 8765))
+    try:
+        local_port = int(port_str)
+    except ValueError:
+        local_port = 8765
 
     result = configure_studio(
         main_character_name=name,
@@ -396,8 +391,7 @@ def run_interactive_onboarding() -> Dict[str, Any]:
         default_book_mode=mode,
         default_page_count=page_count,
         books_output_dir=books_dir,
-        publish_web_root=web_root,
-        publish_base_url=base_url,
+        local_server_port=local_port,
     )
 
     print("\n✅ Onboarding complete! Saved local configuration to:")
@@ -429,6 +423,7 @@ def get_books_dir() -> Path:
 def list_books() -> List[Dict[str, Any]]:
     books_dir = get_books_dir()
     profile = get_studio_profile()
+    local_port = profile["paths"]["local_server_port"]
     web_root = Path(profile["paths"]["publish_web_root"]) if profile["paths"]["publish_web_root"] else None
     base_url = profile["paths"]["publish_base_url"]
 
@@ -445,6 +440,7 @@ def list_books() -> List[Dict[str, Any]]:
             continue
 
         slug = child.name
+        standalone_html = child / f"{slug}.html"
         published_dir = (web_root / slug) if web_root else None
         is_published = bool(published_dir and (published_dir / "index.html").exists())
         live_url = f"{base_url}/{slug}" if (is_published and base_url) else None
@@ -452,10 +448,11 @@ def list_books() -> List[Dict[str, Any]]:
         books.append({
             "slug": slug,
             "workspace_dir": str(child),
+            "single_file_html": str(standalone_html) if standalone_html.exists() else None,
             "has_storyboard": storyboard_json.exists(),
             "has_reader": index_html.exists(),
-            "published": is_published,
-            "live_url": live_url,
+            "local_url": f"http://localhost:{local_port}/{slug}/" if index_html.exists() else None,
+            "custom_live_url": live_url,
         })
     return books
 
@@ -485,7 +482,6 @@ def init_book_project(
     resolved_pages = int(page_count or defaults["page_count"] or 12)
     resolved_char_name = character_name or mc["name"] or "Our Hero"
 
-    # Combine default character description + outfit from .env if not overridden
     default_desc_parts = []
     if mc["age"]:
         default_desc_parts.append(f"{mc['age']}-year-old")
@@ -495,7 +491,6 @@ def init_book_project(
         default_desc_parts.append(f"wearing {mc['outfit']}")
     resolved_char_desc = character_description or ", ".join(default_desc_parts) or "Friendly young child"
 
-    # Copy both default .env character photos and any book-specific reference photos
     all_input_refs: List[str] = list(mc["photo_paths"])
     if reference_images:
         for r in reference_images:
@@ -656,7 +651,7 @@ def ingest_book_images(
             im = im.convert("RGB")
             fitted = ImageOps.fit(im, (width, height), method=Image.Resampling.LANCZOS)
             fitted.save(png_path, format="PNG", optimize=True)
-            fitted.save(webp_path, format="WEBP", quality=86, method=6)
+            fitted.save(webp_path, format="WEBP", quality=84, method=6)
 
         processed.append({"key": stem, "png": str(png_path), "webp": str(webp_path)})
 
@@ -668,79 +663,164 @@ def ingest_book_images(
     }
 
 
-def _build_reader_pages_js(storyboard: Dict[str, Any]) -> List[Dict[str, Any]]:
+def _encode_asset_as_data_uri(project_dir: Path, rel_asset_path: str) -> str:
+    """Convert an asset path (preferring .webp for compact single-file HTML) to a base64 data URI."""
+    candidate = project_dir / rel_asset_path
+    webp_candidate = candidate.with_suffix(".webp")
+    if webp_candidate.exists():
+        raw = webp_candidate.read_bytes()
+        b64 = base64.b64encode(raw).decode("ascii")
+        return f"data:image/webp;base64,{b64}"
+    if candidate.exists():
+        mime = "image/png" if candidate.suffix.lower() == ".png" else "image/jpeg"
+        raw = candidate.read_bytes()
+        b64 = base64.b64encode(raw).decode("ascii")
+        return f"data:{mime};base64,{b64}"
+    return rel_asset_path
+
+
+def _resolve_asset_ref(project_dir: Path, stem: str, inline_data_uris: bool) -> str:
+    webp_rel = f"assets/{stem}.webp"
+    png_rel = f"assets/{stem}.png"
+    chosen_rel = webp_rel if (project_dir / webp_rel).exists() else png_rel
+    if inline_data_uris:
+        return _encode_asset_as_data_uri(project_dir, chosen_rel)
+    return chosen_rel
+
+
+def _build_reader_pages_js(
+    storyboard: Dict[str, Any],
+    project_dir: Path,
+    inline_data_uris: bool = False,
+) -> List[Dict[str, Any]]:
     mode = storyboard.get("mode", "lift-the-flap")
     title = storyboard.get("title", "Bedtime Story")
     subtitle = storyboard.get("subtitle", "A Bedtime Picture Book")
-    cover_info = storyboard.get("cover") or {}
 
     pages_js: List[Dict[str, Any]] = [
         {
-            "type": "cover",
+            "label": "Cover",
             "title": title,
             "subtitle": subtitle,
-            "realityImg": "assets/cover.png",
-            "realityAlt": cover_info.get("alt") or f"Cover illustration for {title}",
+            "coverImage": _resolve_asset_ref(project_dir, "cover", inline_data_uris),
+            "hasFlap": False,
+            "text": [subtitle],
         }
     ]
 
     for p in storyboard.get("pages") or []:
         num = int(p.get("number", 1))
-        has_flap = mode == "lift-the-flap" and bool(p.get("imaginary_prompt") or p.get("imaginaryImg"))
-        reality_img = p.get("realityImg") or f"assets/page-{num:02d}-reality.png"
-        imaginary_img = (
-            p.get("imaginaryImg") or f"assets/page-{num:02d}-imaginary.png"
-            if has_flap
-            else reality_img
+        has_flap = mode == "lift-the-flap" and bool(
+            p.get("imaginary_prompt") or p.get("imaginaryImg") or p.get("imaginaryImage")
         )
+        real_src = _resolve_asset_ref(project_dir, f"page-{num:02d}-reality", inline_data_uris)
+        imag_src = (
+            _resolve_asset_ref(project_dir, f"page-{num:02d}-imaginary", inline_data_uris)
+            if has_flap
+            else real_src
+        )
+        paragraphs = p.get("paragraphs") or p.get("text") or []
+        if isinstance(paragraphs, str):
+            paragraphs = [paragraphs]
+
         pages_js.append({
-            "type": "story",
-            "number": num,
-            "badge": p.get("badge") or f"Page {num}",
+            "label": p.get("badge") or p.get("label") or f"Page {num}",
             "title": p.get("title") or f"Page {num}",
-            "paragraphs": p.get("paragraphs") or [],
+            "realImage": real_src,
+            "imaginaryImage": imag_src,
+            "imaginaryCaption": (
+                p.get("imagination_label")
+                or p.get("imaginaryCaption")
+                or ("✨ Imaginary World" if has_flap else "")
+            ),
+            "flapHint": (
+                p.get("flap_prompt")
+                or p.get("flapHint")
+                or ("Lift the flap to see the imaginary world!" if has_flap else "")
+            ),
+            "hasFlap": has_flap,
             "refrain": p.get("refrain") or "",
-            "flapPrompt": p.get("flap_prompt") or ("Lift the flap to see the imaginary world!" if has_flap else ""),
-            "imaginationLabel": p.get("imagination_label") or ("Imaginary World!" if has_flap else ""),
-            "realityImg": reality_img,
-            "realityAlt": p.get("reality_alt") or f"Page {num} illustration",
-            "imaginaryImg": imaginary_img,
-            "imaginaryAlt": p.get("imaginary_alt") or f"Page {num} imaginary illustration",
+            "text": paragraphs,
         })
 
     end_info = storyboard.get("end") or {}
     pages_js.append({
-        "type": "end",
-        "kicker": end_info.get("kicker") or "Hooray!",
+        "kind": "the-end",
+        "label": "Finish",
+        "kicker": end_info.get("kicker") or "HOORAY!",
         "title": end_info.get("title") or "The End",
-        "subtitle": end_info.get("subtitle") or f"Great reading! Ready to read {title} again?",
+        "hasFlap": False,
+        "text": [
+            end_info.get("subtitle")
+            or f"Great reading! Ready to read {title} again?"
+        ],
     })
     return pages_js
 
 
-def _find_next_available_port(start_port: int = 3020) -> int:
+def _get_lan_ip() -> str:
+    """Detect the device's local LAN IP address so phones/tablets on Wi-Fi can open the book."""
     try:
-        out = subprocess.check_output(["docker", "ps", "--format", "{{.Ports}}"], text=True)
-        used = {int(m) for m in re.findall(r":(\d+)->", out)}
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.settimeout(0.5)
+            s.connect(("8.8.8.8", 80))
+            return s.getsockname()[0]
     except Exception:
-        used = set()
-    port = start_port
-    while port in used:
-        port += 1
-    return port
+        return "127.0.0.1"
+
+
+def _is_port_open(port: int, host: str = "127.0.0.1") -> bool:
+    try:
+        with socket.create_connection((host, port), timeout=0.3):
+            return True
+    except OSError:
+        return False
+
+
+def ensure_local_server(books_dir: Path, port: int = 8765) -> Dict[str, Any]:
+    """Ensure a background HTTP server is serving `books_dir` on `0.0.0.0:<port>`."""
+    books_dir.mkdir(parents=True, exist_ok=True)
+    already_running = _is_port_open(port)
+    if not already_running:
+        subprocess.Popen(
+            [sys.executable, "-m", "http.server", str(port), "--bind", "0.0.0.0", "--directory", str(books_dir)],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+        for _ in range(10):
+            if _is_port_open(port):
+                break
+            time.sleep(0.1)
+
+    lan_ip = _get_lan_ip()
+    return {
+        "running": _is_port_open(port),
+        "port": port,
+        "books_dir": str(books_dir),
+        "localhost_base": f"http://localhost:{port}",
+        "lan_base": f"http://{lan_ip}:{port}",
+    }
 
 
 def publish_book(
     slug: str,
+    serve_local: bool = True,
     deploy_static: bool = True,
-    deploy_docker: bool = False,
     port: Optional[int] = None,
     web_root_override: Optional[str] = None,
     base_url_override: Optional[str] = None,
 ) -> Dict[str, Any]:
-    """Build the interactive landscape reader from `storyboard.json` and optionally deploy."""
+    """
+    Build:
+      1. A self-contained single-file HTML book (`<slug>.html`) with all CSS, JS, and images inlined.
+      2. A standard multi-file web reader (`index.html`, `styles.css`, `script.js`, `assets/`).
+      3. By default, host locally on the user's device (`http://localhost:<port>/<slug>/` and LAN URL).
+      4. Optionally copy to `PUBLISH_WEB_ROOT` if configured in `.env`.
+    """
     slug = slugify(slug)
-    project_dir = get_books_dir() / slug
+    books_dir = get_books_dir()
+    project_dir = books_dir / slug
     sb_path = project_dir / "storyboard.json"
     if not sb_path.exists():
         raise FileNotFoundError(f"Missing storyboard.json in {project_dir}")
@@ -750,74 +830,107 @@ def publish_book(
     subtitle = storyboard.get("subtitle", "An Interactive Landscape Picture Book")
     kicker = storyboard.get("kicker", "Interactive Bedtime Book")
     story_pages = storyboard.get("pages") or []
-    pages_js = _build_reader_pages_js(storyboard)
 
     index_tpl = (TEMPLATES_READER_DIR / "index.html").read_text(encoding="utf-8")
+    styles_css = (TEMPLATES_READER_DIR / "styles.css").read_text(encoding="utf-8")
     script_tpl = (TEMPLATES_READER_DIR / "script.js").read_text(encoding="utf-8")
 
-    rendered_index = (
+    base_html = (
         index_tpl.replace("__BOOK_TITLE__", html.escape(title))
         .replace("__BOOK_SUBTITLE__", html.escape(subtitle))
         .replace("__BOOK_KICKER__", html.escape(kicker))
     )
-    rendered_script = (
-        script_tpl.replace("/* __TOTAL_STORY_PAGES__ */ 17", str(len(story_pages)))
-        .replace("/* __BOOK_PAGES_JSON__ */ []", json.dumps(pages_js, indent=2, ensure_ascii=False))
+
+    # 1. Build standard multi-file reader in <project_dir>/
+    pages_external = _build_reader_pages_js(storyboard, project_dir, inline_data_uris=False)
+    rendered_script_external = re.sub(
+        r"/\*\s*__TOTAL_STORY_PAGES__\s*\*/\s*\d+",
+        str(len(story_pages)),
+        script_tpl,
+    ).replace(
+        "/* __BOOK_PAGES_JSON__ */ []",
+        json.dumps(pages_external, indent=2, ensure_ascii=False),
     )
 
-    (project_dir / "index.html").write_text(rendered_index, encoding="utf-8")
-    (project_dir / "script.js").write_text(rendered_script, encoding="utf-8")
-    shutil.copy2(TEMPLATES_READER_DIR / "styles.css", project_dir / "styles.css")
-    shutil.copy2(TEMPLATES_READER_DIR / "Dockerfile", project_dir / "Dockerfile")
-    shutil.copy2(TEMPLATES_READER_DIR / "nginx.conf", project_dir / "nginx.conf")
+    (project_dir / "index.html").write_text(base_html, encoding="utf-8")
+    (project_dir / "styles.css").write_text(styles_css, encoding="utf-8")
+    (project_dir / "script.js").write_text(rendered_script_external, encoding="utf-8")
+
+    # 2. Build self-contained SINGLE-FILE HTML book (<slug>.html) with inlined CSS, JS, and base64 WebP art
+    pages_inlined = _build_reader_pages_js(storyboard, project_dir, inline_data_uris=True)
+    rendered_script_inlined = re.sub(
+        r"/\*\s*__TOTAL_STORY_PAGES__\s*\*/\s*\d+",
+        str(len(story_pages)),
+        script_tpl,
+    ).replace(
+        "/* __BOOK_PAGES_JSON__ */ []",
+        json.dumps(pages_inlined, ensure_ascii=False),
+    )
+
+    single_file_html_content = (
+        base_html.replace(
+            '<link rel="stylesheet" href="styles.css" />',
+            f"<style>\n{styles_css}\n</style>",
+        ).replace(
+            '<script src="script.js"></script>',
+            f"<script>\n{rendered_script_inlined}\n</script>",
+        )
+    )
+
+    standalone_file_in_project = project_dir / f"{slug}.html"
+    standalone_file_in_root = books_dir / f"{slug}.html"
+    standalone_file_in_project.write_text(single_file_html_content, encoding="utf-8")
+    shutil.copy2(standalone_file_in_project, standalone_file_in_root)
 
     profile = get_studio_profile()
     paths_cfg = profile["paths"]
+    chosen_port = int(port or paths_cfg["local_server_port"] or 8765)
+
+    result: Dict[str, Any] = {
+        "slug": slug,
+        "workspace_dir": str(project_dir),
+        "single_file_html": str(standalone_file_in_project),
+        "single_file_html_copy": str(standalone_file_in_root),
+        "file_url": f"file://{standalone_file_in_project}",
+        "local_url": None,
+        "local_single_file_url": None,
+        "lan_url": None,
+        "lan_single_file_url": None,
+        "custom_static_site_dir": None,
+        "custom_live_url": None,
+    }
+
+    # 3. Default Local Device Hosting
+    if serve_local:
+        srv = ensure_local_server(books_dir, chosen_port)
+        result["local_url"] = f"{srv['localhost_base']}/{slug}/"
+        result["local_single_file_url"] = f"{srv['localhost_base']}/{slug}.html"
+        result["lan_url"] = f"{srv['lan_base']}/{slug}/"
+        result["lan_single_file_url"] = f"{srv['lan_base']}/{slug}.html"
+
+    # 4. Optional Custom Static Web Root Copy (for users who self-host a web root)
     web_root_str = web_root_override if web_root_override is not None else paths_cfg["publish_web_root"]
     base_url_str = (
         base_url_override.rstrip("/")
         if base_url_override is not None
         else paths_cfg["publish_base_url"]
     )
-
-    result: Dict[str, Any] = {
-        "slug": slug,
-        "workspace_dir": str(project_dir),
-        "local_preview_command": f"python3 -m http.server 8080 --directory {project_dir}",
-        "static_site_dir": None,
-        "live_url": None,
-        "docker_url": None,
-    }
-
     if deploy_static and web_root_str:
         target_dir = Path(os.path.expanduser(web_root_str)).resolve() / slug
         target_assets = target_dir / "assets"
         target_assets.mkdir(parents=True, exist_ok=True)
-        for fname in ("index.html", "styles.css", "script.js"):
-            shutil.copy2(project_dir / fname, target_dir / fname)
+        for fname in ("index.html", "styles.css", "script.js", f"{slug}.html"):
+            src_f = project_dir / fname
+            if src_f.exists():
+                shutil.copy2(src_f, target_dir / fname)
         src_assets = project_dir / "assets"
         if src_assets.exists():
             for asset_file in src_assets.iterdir():
                 if asset_file.is_file() and asset_file.suffix.lower() in (".png", ".webp", ".jpg", ".jpeg"):
                     shutil.copy2(asset_file, target_assets / asset_file.name)
-        result["static_site_dir"] = str(target_dir)
+        result["custom_static_site_dir"] = str(target_dir)
         if base_url_str:
-            result["live_url"] = f"{base_url_str}/{slug}"
-
-    if deploy_docker:
-        bind_ip = paths_cfg["docker_bind_ip"] or "127.0.0.1"
-        chosen_port = port or _find_next_available_port(paths_cfg["docker_start_port"])
-        compose_content = f"""services:
-  {slug}-book:
-    build: .
-    container_name: {slug}-book
-    ports:
-      - "{bind_ip}:{chosen_port}:80"
-    restart: unless-stopped
-"""
-        (project_dir / "docker-compose.yml").write_text(compose_content, encoding="utf-8")
-        subprocess.run(["docker", "compose", "up", "-d", "--build"], cwd=project_dir, check=True)
-        result["docker_url"] = f"http://{bind_ip}:{chosen_port}"
+            result["custom_live_url"] = f"{base_url_str}/{slug}"
 
     return result
 
@@ -837,6 +950,9 @@ def main() -> None:
     sub.add_parser("profile", help="Print the active studio profile from .env")
     sub.add_parser("list", help="List all books in BOOKS_OUTPUT_DIR")
 
+    p_srv = sub.add_parser("serve", help="Start or check the local device web server for all books")
+    p_srv.add_argument("--port", type=int, default=None, help="Override LOCAL_SERVER_PORT")
+
     p_cfg = sub.add_parser("configure", help="Non-interactively save character & studio defaults to .env")
     p_cfg.add_argument("--name", help="Main character name")
     p_cfg.add_argument("--age", help="Main character age")
@@ -849,8 +965,9 @@ def main() -> None:
     p_cfg.add_argument("--mode", choices=["lift-the-flap", "standard"], help="Default book mode")
     p_cfg.add_argument("--pages", type=int, help="Default story page count")
     p_cfg.add_argument("--books-dir", help="Output directory for generated books")
-    p_cfg.add_argument("--web-root", help="Static site web root directory for unlisted publishing")
-    p_cfg.add_argument("--base-url", help="Public base URL matching --web-root")
+    p_cfg.add_argument("--port", type=int, help="Local device web server port")
+    p_cfg.add_argument("--web-root", help="Optional static site web root directory for self-hosting")
+    p_cfg.add_argument("--base-url", help="Optional public base URL matching --web-root")
 
     p_init = sub.add_parser("init", help="Initialize a new book workspace")
     p_init.add_argument("--slug", required=True)
@@ -870,11 +987,14 @@ def main() -> None:
     p_ing.add_argument("--slug", required=True)
     p_ing.add_argument("--map-json", required=True, help="JSON string or path to JSON file mapping key->path")
 
-    p_pub = sub.add_parser("publish", help="Build reader and deploy static site and/or Docker container")
+    p_pub = sub.add_parser(
+        "publish",
+        help="Build single-file HTML book (<slug>.html) + standard reader and host locally on this device",
+    )
     p_pub.add_argument("--slug", required=True)
-    p_pub.add_argument("--no-static", action="store_true")
-    p_pub.add_argument("--docker", action="store_true")
-    p_pub.add_argument("--port", type=int, default=None)
+    p_pub.add_argument("--no-local-server", action="store_true", help="Do not auto-start the local device HTTP server")
+    p_pub.add_argument("--no-static", action="store_true", help="Skip copying to PUBLISH_WEB_ROOT even if set")
+    p_pub.add_argument("--port", type=int, default=None, help="Override local HTTP server port")
     p_pub.add_argument("--web-root", default=None)
     p_pub.add_argument("--base-url", default=None)
 
@@ -888,6 +1008,11 @@ def main() -> None:
         print(json.dumps(get_studio_profile(), indent=2))
     elif args.cmd == "list":
         print(json.dumps(list_books(), indent=2))
+    elif args.cmd == "serve":
+        profile = get_studio_profile()
+        port = int(args.port or profile["paths"]["local_server_port"] or 8765)
+        res = ensure_local_server(get_books_dir(), port)
+        print(json.dumps(res, indent=2))
     elif args.cmd == "configure":
         res = configure_studio(
             main_character_name=args.name,
@@ -901,6 +1026,7 @@ def main() -> None:
             default_book_mode=args.mode,
             default_page_count=args.pages,
             books_output_dir=args.books_dir,
+            local_server_port=args.port,
             publish_web_root=args.web_root,
             publish_base_url=args.base_url,
         )
@@ -932,8 +1058,8 @@ def main() -> None:
     elif args.cmd == "publish":
         res = publish_book(
             slug=args.slug,
+            serve_local=not args.no_local_server,
             deploy_static=not args.no_static,
-            deploy_docker=args.docker,
             port=args.port,
             web_root_override=args.web_root,
             base_url_override=args.base_url,
