@@ -61,6 +61,7 @@ DEFAULT_ENV_VALUES: Dict[str, str] = {
     "MAIN_CHARACTER_PHOTO_PATHS": "",
     "SUPPORTING_CHARACTERS": "",
     "RECURRING_PROPS": "",
+    "DEFAULT_STYLE_PRESET": "watercolor-ink",
     "DEFAULT_ART_STYLE": (
         "Children's picture-book illustration with hand-drawn warm ink outlines and "
         "soft flat watercolor washes, warm natural daylight, expressive friendly faces, "
@@ -77,6 +78,181 @@ DEFAULT_ENV_VALUES: Dict[str, str] = {
 
 VALID_ENTITY_KINDS = ("main_character", "supporting_character", "pet", "prop")
 VALID_REVISION_SCOPES = ("text-only", "reality-only", "imaginary-only", "paired-scene")
+DEFAULT_STYLE_PRESET_KEY = "watercolor-ink"
+
+ART_STYLE_PRESETS: Dict[str, Dict[str, Any]] = {
+    "watercolor-ink": {
+        "key": "watercolor-ink",
+        "id": "watercolor-ink",
+        "label": "Warm Ink & Watercolor",
+        "name": "Warm Ink & Watercolor",
+        "aliases": ["watercolor", "ink-watercolor", "default", "water-color", "classic"],
+        "description": "Gentle hand-drawn ink outlines with soft flat watercolor washes on warm paper.",
+        "summary": "Gentle hand-drawn ink outlines with soft flat watercolor washes on warm paper.",
+        "prompt": (
+            "Children's picture-book illustration with hand-drawn warm ink outlines and "
+            "soft flat watercolor washes, subtle cold-press paper grain texture, warm natural "
+            "daylight, expressive friendly faces, 4:3 horizontal landscape composition, "
+            "no text or letters in the artwork."
+        ),
+    },
+    "bold-gouache": {
+        "key": "bold-gouache",
+        "id": "bold-gouache",
+        "label": "Bold Outlines & Gouache (Maisy Style)",
+        "name": "Bold Outlines & Gouache (Maisy Style)",
+        "aliases": ["maisy", "maisy-style", "bold-outlines", "bold-outline", "gouache"],
+        "description": "Thick, confident black brush outlines with flat, vibrant primary/secondary gouache color blocks.",
+        "summary": "Thick, confident black brush outlines with flat, vibrant primary/secondary gouache color blocks.",
+        "prompt": (
+            "Playful toddler picture-book illustration in a bold, hand-painted gouache style "
+            "inspired by Lucy Cousins' Maisy books: thick, confident black brush outlines with "
+            "slightly uneven hand-drawn charm, vibrant flat opaque gouache color blocks in cheerful "
+            "primary and secondary colors, simplified welcoming shapes against clean warm cream "
+            "paper, expressive friendly faces, 4:3 horizontal landscape composition, "
+            "no text or letters in the artwork."
+        ),
+    },
+    "claymation": {
+        "key": "claymation",
+        "id": "claymation",
+        "label": "Handcrafted Stop-Motion Claymation",
+        "name": "Handcrafted Stop-Motion Claymation",
+        "aliases": ["clay", "stop-motion", "plasticine", "aardman"],
+        "description": "Tactile sculpted polymer-clay miniature diorama with warm tabletop studio lighting.",
+        "summary": "Tactile sculpted polymer-clay miniature diorama with warm tabletop studio lighting.",
+        "prompt": (
+            "Tactile handcrafted stop-motion claymation children's book illustration: sculpted "
+            "polymer-clay and plasticine miniature characters and props with subtle fingerprint "
+            "and hand-molded clay surface textures, cozy miniature diorama set with warm practical "
+            "tabletop studio lighting, gentle shallow depth-of-field tilt-shift lens feel, "
+            "expressive friendly clay faces, 4:3 horizontal landscape composition, "
+            "no text or letters in the artwork."
+        ),
+    },
+    "paper-cutout": {
+        "key": "paper-cutout",
+        "id": "paper-cutout",
+        "label": "Layered Paper-Cutout Collage",
+        "name": "Layered Paper-Cutout Collage",
+        "aliases": ["collage", "cut-paper", "paper-collage", "eric-carle"],
+        "description": "Hand-painted tissue and construction paper collage with crisp cut edges and rich textures.",
+        "summary": "Hand-painted tissue and construction paper collage with crisp cut edges and rich textures.",
+        "prompt": (
+            "Children's picture-book illustration crafted as a layered hand-painted tissue-paper "
+            "and textured construction-paper collage: visible crisp cut-paper edges, joyful "
+            "acrylic brush textures on each paper piece, warm tactile depth, expressive friendly "
+            "character silhouettes and faces, 4:3 horizontal landscape composition, "
+            "no text or letters in the artwork."
+        ),
+    },
+    "crayon-storybook": {
+        "key": "crayon-storybook",
+        "id": "crayon-storybook",
+        "label": "Cozy Colored Pencil & Soft Pastel",
+        "name": "Cozy Colored Pencil & Soft Pastel",
+        "aliases": ["crayon", "colored-pencil", "pastel", "sketchbook"],
+        "description": "Soft grainy colored pencil, wax crayon, and oil pastel on toothy cream paper.",
+        "summary": "Soft grainy colored pencil, wax crayon, and oil pastel on toothy cream paper.",
+        "prompt": (
+            "Cozy bedtime picture-book illustration rendered in soft colored pencil, wax crayon, "
+            "and oil pastel on toothy warm cream sketchbook paper: gentle hand-shaded grain "
+            "textures, warm golden bedside-lamp glow, tender classic storybook charm, expressive "
+            "friendly faces, 4:3 horizontal landscape composition, no text or letters in the artwork."
+        ),
+    },
+    "retro-midcentury": {
+        "key": "retro-midcentury",
+        "id": "retro-midcentury",
+        "label": "Mid-Century Golden Storybook",
+        "name": "Mid-Century Golden Storybook",
+        "aliases": ["retro", "midcentury", "golden-book", "little-golden-book"],
+        "description": "Vintage 1950s gouache and lithograph storybook aesthetic with warm offset-print colors.",
+        "summary": "Vintage 1950s gouache and lithograph storybook aesthetic with warm offset-print colors.",
+        "prompt": (
+            "Vintage mid-century 1950s children's picture-book gouache and lithograph illustration: "
+            "warm offset-print color palette of mustard yellow, vintage teal, coral red, and sage "
+            "green, charming dry-brush gouache textures on warm aged paper, expressive retro "
+            "storybook characters, 4:3 horizontal landscape composition, no text or letters in the artwork."
+        ),
+    },
+}
+
+STYLE_PRESET_ALIASES: Dict[str, str] = {}
+for _pid, _pdata in ART_STYLE_PRESETS.items():
+    STYLE_PRESET_ALIASES[_pid] = _pid
+    for _alias in _pdata.get("aliases", []):
+        STYLE_PRESET_ALIASES[_alias.lower()] = _pid
+
+
+def list_style_presets() -> Dict[str, Any]:
+    """Return all built-in art style presets, their aliases, summaries, and full style prompts."""
+    return {
+        "default_preset": DEFAULT_STYLE_PRESET_KEY,
+        "count": len(ART_STYLE_PRESETS),
+        "presets": list(ART_STYLE_PRESETS.values()),
+    }
+
+
+def resolve_art_style(
+    style_preset: Optional[str] = None,
+    art_style: Optional[str] = None,
+    style_notes: Optional[str] = None,
+    default_preset: str = DEFAULT_STYLE_PRESET_KEY,
+    style_or_preset: Optional[str] = None,
+    fallback_art_style: Optional[str] = None,
+) -> Dict[str, str]:
+    """
+    Resolve a preset ID, friendly alias (e.g. 'maisy', 'claymation', 'watercolor'),
+    or custom freeform style string into a normalized dictionary containing:
+    `style_preset`, `preset_id`, `preset_label`, `preset_name`, `base_art_style`,
+    `style_notes`, and `art_style`.
+    """
+    raw = (style_preset or style_or_preset or "").strip()
+    notes = (style_notes or "").strip()
+    custom_art = (art_style or fallback_art_style or "").strip()
+    norm_key = re.sub(r"[^a-z0-9]+", "-", raw.lower()).strip("-") if raw else ""
+
+    def _build_ret(pid: str, label: str, base_prompt: str) -> Dict[str, str]:
+        if notes and notes.lower() not in base_prompt.lower():
+            final_prompt = f"{base_prompt} Additional style direction: {notes}"
+        else:
+            final_prompt = base_prompt
+        return {
+            "style_preset": pid,
+            "preset_id": pid,
+            "preset_label": label,
+            "preset_name": label,
+            "base_art_style": base_prompt,
+            "style_notes": notes,
+            "art_style": final_prompt,
+        }
+
+    if norm_key and norm_key in STYLE_PRESET_ALIASES:
+        pid = STYLE_PRESET_ALIASES[norm_key]
+        preset = ART_STYLE_PRESETS[pid]
+        base_prompt = custom_art if (custom_art and custom_art != DEFAULT_ENV_VALUES.get("DEFAULT_ART_STYLE")) else preset["prompt"]
+        for other_id, other_p in ART_STYLE_PRESETS.items():
+            if other_id != pid and custom_art == other_p["prompt"]:
+                base_prompt = preset["prompt"]
+                break
+        return _build_ret(pid, preset["name"], base_prompt)
+
+    if raw and raw.lower() != "custom":
+        for pid, preset in ART_STYLE_PRESETS.items():
+            if raw == preset["prompt"]:
+                return _build_ret(pid, preset["name"], raw)
+        return _build_ret("custom", "Custom Art Style", custom_art or raw)
+
+    if custom_art:
+        for pid, preset in ART_STYLE_PRESETS.items():
+            if custom_art == preset["prompt"]:
+                return _build_ret(pid, preset["name"], custom_art)
+        return _build_ret("custom", "Custom Art Style", custom_art)
+
+    fallback_pid = STYLE_PRESET_ALIASES.get(default_preset, DEFAULT_STYLE_PRESET_KEY)
+    default_p = ART_STYLE_PRESETS[fallback_pid]
+    return _build_ret(fallback_pid, default_p["name"], default_p["prompt"])
 
 
 class StoryboardValidationError(ValueError):
@@ -773,6 +949,11 @@ def get_studio_profile() -> Dict[str, Any]:
     web_root_raw = env.get("PUBLISH_WEB_ROOT", "").strip()
     web_root = str(resolve_repo_path(web_root_raw)) if web_root_raw else ""
 
+    resolved_style_info = resolve_art_style(
+        style_preset=env.get("DEFAULT_STYLE_PRESET", DEFAULT_ENV_VALUES["DEFAULT_STYLE_PRESET"]),
+        art_style=env.get("DEFAULT_ART_STYLE", ""),
+    )
+
     return {
         "is_onboarded": is_onboarded,
         "env_file": str(ENV_FILE),
@@ -789,7 +970,9 @@ def get_studio_profile() -> Dict[str, Any]:
         "recurring_props": env.get("RECURRING_PROPS", ""),
         "identities": list(identities.values()),
         "defaults": {
-            "art_style": env.get("DEFAULT_ART_STYLE", DEFAULT_ENV_VALUES["DEFAULT_ART_STYLE"]),
+            "style_preset": resolved_style_info["style_preset"],
+            "style_preset_label": resolved_style_info["preset_label"],
+            "art_style": resolved_style_info["art_style"],
             "book_mode": env.get("DEFAULT_BOOK_MODE", "lift-the-flap"),
             "bedtime_mode": env.get("DEFAULT_BEDTIME_MODE", "false").lower() == "true",
             "page_count": int(env.get("DEFAULT_PAGE_COUNT", "12") or 12),
@@ -820,6 +1003,7 @@ def get_onboarding_status() -> Dict[str, Any]:
         "env_file": profile["env_file"],
         "missing_recommended_fields": missing,
         "profile": profile,
+        "available_style_presets": list_style_presets()["presets"],
         "agent_onboarding_instructions": (
             "If `is_onboarded` is false (or the user wants to update their defaults), "
             "walk the user through a quick friendly setup before creating their first book:\n"
@@ -827,7 +1011,9 @@ def get_onboarding_status() -> Dict[str, Any]:
             "2. Ask for a reference photo path AND/OR a short text description of what they look like "
             "(hair, eyes, skin tone, glasses, etc.) plus their signature outfit.\n"
             "3. Optionally ask about supporting characters (parents, siblings, pets) or favorite toys/props.\n"
-            "4. Ask if they prefer 'lift-the-flap' (Reality flap lifts to reveal Imaginary world) or 'standard' pages.\n"
+            "4. Ask if they prefer 'lift-the-flap' (Reality flap lifts to reveal Imaginary world) or 'standard' pages, "
+            "and which art style preset they like (`watercolor-ink`, `bold-gouache` [Maisy-style bold outlines], "
+            "`claymation`, `paper-cutout`, `crayon-storybook`, or `retro-midcentury`).\n"
             "5. Call `configure_studio(...)` (and `upsert_identity(...)` for distinct siblings/pets/props) to save these defaults."
         ),
     }
@@ -841,6 +1027,7 @@ def configure_studio(
     main_character_photos: Optional[List[str]] = None,
     supporting_characters: Optional[str] = None,
     recurring_props: Optional[str] = None,
+    default_style_preset: Optional[str] = None,
     default_art_style: Optional[str] = None,
     default_book_mode: Optional[str] = None,
     default_bedtime_mode: Optional[bool] = None,
@@ -865,6 +1052,11 @@ def configure_studio(
         updates["SUPPORTING_CHARACTERS"] = supporting_characters
     if recurring_props is not None:
         updates["RECURRING_PROPS"] = recurring_props
+    if default_style_preset is not None:
+        resolved_preset = resolve_art_style(style_preset=default_style_preset, art_style=default_art_style)
+        updates["DEFAULT_STYLE_PRESET"] = resolved_preset["style_preset"]
+        if default_art_style is None:
+            updates["DEFAULT_ART_STYLE"] = resolved_preset["art_style"]
     if default_art_style is not None:
         updates["DEFAULT_ART_STYLE"] = default_art_style
     if default_book_mode is not None:
@@ -998,7 +1190,13 @@ def run_interactive_onboarding() -> Dict[str, Any]:
     except ValueError:
         page_count = 12
 
-    art_style = _prompt_input("Default illustration style", defaults["art_style"])
+    preset_keys = ", ".join(ART_STYLE_PRESETS.keys())
+    style_preset = _prompt_input(
+        f"Default art style preset ({preset_keys})",
+        defaults.get("style_preset") or DEFAULT_STYLE_PRESET_KEY,
+    )
+    resolved_style = resolve_art_style(style_preset=style_preset)
+    art_style = _prompt_input("Default illustration style prompt", resolved_style["art_style"])
 
     print("\n--- 4. Local Output & Hosting Defaults ---")
     books_dir = _prompt_input("Directory where generated books are saved", paths["books_output_dir"] or "./books")
@@ -1016,6 +1214,7 @@ def run_interactive_onboarding() -> Dict[str, Any]:
         main_character_photos=photo_list if raw_photos != existing_photos_str else None,
         supporting_characters=supporting,
         recurring_props=props,
+        default_style_preset=resolved_style["style_preset"],
         default_art_style=art_style,
         default_book_mode=mode,
         default_page_count=page_count,
@@ -1062,7 +1261,7 @@ def _save_revision_state(project_dir: Path, state: Dict[str, Any]) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Book Project Pipeline (list, init, storyboard, preview, ingest, revise, publish)
+# Book Project Pipeline (list, init, plan, storyboard, preview, ingest, revise, publish)
 # ---------------------------------------------------------------------------
 
 def get_books_dir() -> Path:
@@ -1088,7 +1287,8 @@ def list_books() -> List[Dict[str, Any]]:
             continue
         index_html = child / "index.html"
         storyboard_json = child / "storyboard.json"
-        if not (index_html.exists() or storyboard_json.exists()):
+        plan_md = child / "book-plan.md"
+        if not (index_html.exists() or storyboard_json.exists() or plan_md.exists()):
             continue
 
         slug = child.name
@@ -1101,8 +1301,10 @@ def list_books() -> List[Dict[str, Any]]:
         books.append({
             "slug": slug,
             "workspace_dir": str(child),
+            "book_plan_markdown": str(plan_md) if plan_md.exists() else None,
             "single_file_html": str(standalone_html) if standalone_html.exists() else None,
             "preview_html": str(preview_html) if preview_html.exists() else None,
+            "has_book_plan": plan_md.exists(),
             "has_storyboard": storyboard_json.exists(),
             "has_reader": index_html.exists(),
             "local_url": f"http://localhost:{local_port}/{slug}/" if index_html.exists() else None,
@@ -1123,12 +1325,15 @@ def init_book_project(
     cast_ids: Optional[List[str]] = None,
     entity_overrides: Optional[Dict[str, Dict[str, Any]]] = None,
     bedtime_mode: Optional[bool] = None,
+    style_preset: Optional[str] = None,
+    style_notes: Optional[str] = None,
+    art_style: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
     Initialize a new book project workspace.
-    Supports selecting persistent `cast_ids` from `local_profile/identities.json` and
-    providing per-book `entity_overrides` (e.g. special outfit for this book) without
-    mutating the global family profile.
+    Supports selecting persistent `cast_ids` from `local_profile/identities.json`,
+    per-book `entity_overrides`, and per-book `style_preset` / `style_notes` overrides
+    without mutating the global family profile.
     """
     profile = get_studio_profile()
     mc = profile["main_character"]
@@ -1144,6 +1349,13 @@ def init_book_project(
     resolved_mode = mode or defaults["book_mode"] or "lift-the-flap"
     resolved_pages = int(page_count or defaults["page_count"] or 12)
     resolved_bedtime = defaults.get("bedtime_mode", False) if bedtime_mode is None else bool(bedtime_mode)
+
+    style_info = resolve_art_style(
+        style_preset=style_preset or defaults.get("style_preset"),
+        art_style=art_style if art_style is not None else (defaults["art_style"] if not style_preset else None),
+        style_notes=style_notes,
+        default_preset=defaults.get("style_preset") or DEFAULT_STYLE_PRESET_KEY,
+    )
 
     selected_cast_ids = list(cast_ids) if cast_ids is not None else list(identities.keys())
     overrides = dict(entity_overrides or {})
@@ -1167,7 +1379,7 @@ def init_book_project(
         default_desc_parts.append(f"wearing {mc['outfit']}")
     resolved_char_desc = character_description or ", ".join(default_desc_parts) or "Friendly young child"
 
-    # Copy active references per entity into assets/references/<entity_id>/ so they remain unambiguously labeled
+    # Copy active references per entity into assets/references/ so they remain unambiguously labeled
     entity_ref_manifest: Dict[str, List[Dict[str, str]]] = {}
     copied_refs: List[str] = []
 
@@ -1229,7 +1441,10 @@ def init_book_project(
         "adhoc_reference_images": adhoc_refs,
         "supporting_characters": profile["supporting_characters"],
         "recurring_props": profile["recurring_props"],
-        "art_style": defaults["art_style"],
+        "style_preset": style_info["style_preset"],
+        "style_preset_label": style_info["preset_label"],
+        "style_notes": style_info["style_notes"],
+        "art_style": style_info["art_style"],
         "page_count": resolved_pages,
         "reference_images": copied_refs,
         "project_dir": str(project_dir),
@@ -1261,24 +1476,27 @@ def init_book_project(
 - **Book Mode**: `{resolved_mode}` (`lift-the-flap` = Reality flap + Imaginary world underneath; `standard` = single scene per page)
 - **Bedtime Mode Default**: `{resolved_bedtime}` (wind down gently across the final 2–3 pages)
 - **Target Pages**: {resolved_pages} story pages + 1 cover
-- **Art Style**: {defaults['art_style']}
+- **Style Preset**: `{style_info['style_preset']}` ({style_info['preset_label']})
+- **Resolved Art Style**: {style_info['art_style']}
 - **Story Idea**: {idea}
 
 ## Assigned Cast & Prop Identities (with Per-Book Overrides)
 {cast_section}
 
 ## Next Step
-Create `{project_dir}/storyboard.json` (or call `save_storyboard`) with:
-- `title`, `subtitle`, `kicker`, `mode`, `bedtime_mode`, `cast_ids`
-- `character_bible`: visual continuity rules
-- `cover`: `prompt`
-- `pages`: array of {resolved_pages} pages, each with:
-  - `number` (1..{resolved_pages}), `badge`, `title`, `paragraphs`, `refrain`
-  - `entity_ids`: array of entity IDs appearing on this page (e.g. `["char-leo", "prop-cardboard-rocket"]`)
-  - `shared_composition`: `camera_angle`, `horizon_line`, `focal_subject_placement`, `character_pose`, `key_shapes`
-  - `transformation_mappings`: array of `{{"entity_id": "...", "reality_element": "...", "imaginary_element": "...", "spatial_anchor": "..."}}`
-  - `reality_prompt` and `imaginary_prompt`
-- `end`: `kicker`, `title`, `subtitle`, `bedtime_kicker`, `bedtime_title`, `bedtime_subtitle`
+Either:
+1. **Dry-Run Editable Book Plan (`book-plan.md`)**: Run `generate_book_plan(slug="{slug}")` to generate `{project_dir}/book-plan.md` so the user can review or edit the layout, narrative, style preset, and visual direction before generating any images.
+2. **Direct Storyboard (`storyboard.json`)**: Create `{project_dir}/storyboard.json` (or call `save_storyboard`) with:
+   - `title`, `subtitle`, `kicker`, `mode`, `bedtime_mode`, `style_preset`, `style_notes`, `cast_ids`
+   - `character_bible`: visual continuity rules
+   - `cover`: `prompt`
+   - `pages`: array of {resolved_pages} pages, each with:
+     - `number` (1..{resolved_pages}), `badge`, `title`, `paragraphs`, `refrain`
+     - `entity_ids`: array of entity IDs appearing on this page (e.g. `["char-leo", "prop-cardboard-rocket"]`)
+     - `shared_composition`: `camera_angle`, `horizon_line`, `focal_subject_placement`, `character_pose`, `key_shapes`
+     - `transformation_mappings`: array of `{{"entity_id": "...", "reality_element": "...", "imaginary_element": "...", "spatial_anchor": "..."}}`
+     - `reality_prompt` and `imaginary_prompt`
+   - `end`: `kicker`, `title`, `subtitle`, `bedtime_kicker`, `bedtime_title`, `bedtime_subtitle`
 """
     _atomic_write_text(project_dir / "STORYBOARD_PROMPT.md", prompt_guide)
     return meta
@@ -1530,12 +1748,40 @@ def save_storyboard(
 ) -> Dict[str, Any]:
     """
     Validate and normalize `storyboard.json` against the canonical schema (converting any
-    legacy field aliases with warnings), resolve persistent entity identities and
-    transformation mappings, and generate `prompts.md` + the structured image generation plan.
+    legacy field aliases with warnings), resolve art style presets, persistent entity identities,
+    and transformation mappings, and generate `prompts.md` + the structured image generation plan.
     """
     slug = slugify(slug)
     project_dir = get_books_dir() / slug
     project_dir.mkdir(parents=True, exist_ok=True)
+
+    meta_path = project_dir / "book_meta.json"
+    meta: Dict[str, Any] = {}
+    if meta_path.exists():
+        try:
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
+        except Exception:
+            meta = {}
+
+    profile = get_studio_profile()
+    defaults = profile["defaults"]
+
+    # Resolve style_preset / style_notes / art_style hierarchy:
+    # 1. Storyboard explicit fields -> 2. book_meta.json -> 3. Studio profile defaults
+    sb_preset = storyboard.get("style_preset") or meta.get("style_preset") or defaults.get("style_preset")
+    sb_notes = storyboard.get("style_notes") if storyboard.get("style_notes") is not None else meta.get("style_notes")
+    sb_art_style = storyboard.get("art_style")
+    style_info = resolve_art_style(
+        style_preset=sb_preset,
+        art_style=sb_art_style,
+        style_notes=sb_notes,
+        default_preset=defaults.get("style_preset") or DEFAULT_STYLE_PRESET_KEY,
+    )
+    storyboard = dict(storyboard)
+    storyboard["style_preset"] = style_info["style_preset"]
+    if style_info["style_notes"]:
+        storyboard["style_notes"] = style_info["style_notes"]
+    storyboard["art_style"] = style_info["art_style"]
 
     val_res = validate_and_normalize_storyboard(
         storyboard,
@@ -1548,18 +1794,25 @@ def save_storyboard(
     sb_path = project_dir / "storyboard.json"
     _atomic_write_text(sb_path, json.dumps(storyboard, indent=2, ensure_ascii=False))
 
-    profile = get_studio_profile()
-    art_style = storyboard.get("art_style") or profile["defaults"]["art_style"]
+    art_style = storyboard["art_style"]
     mode = storyboard.get("mode", "lift-the-flap")
     title = storyboard.get("title", slug)
     char_bible = storyboard.get("character_bible", "")
-    cover_prompt = (storyboard.get("cover") or {}).get("prompt") or ""
+    raw_cover_prompt = (storyboard.get("cover") or {}).get("prompt") or ""
+    cover_prompt = (
+        raw_cover_prompt
+        if ("style:" in raw_cover_prompt.lower() or style_info["base_art_style"][:30].lower() in raw_cover_prompt.lower())
+        else f"{raw_cover_prompt}\n\nStyle: {art_style}"
+    )
     pages = storyboard.get("pages") or []
 
     resolved_entities = _resolve_book_entities(project_dir, storyboard)
 
     md_lines = [
         f"# {title} — Illustration Prompts & Flap Transformation Plan (`{mode}`)",
+        "",
+        f"- **Style Preset**: `{style_info['style_preset']}` ({style_info['preset_label']})",
+        f"- **Resolved Art Style**: {art_style}",
         "",
         "## 1. Persistent Cast & Prop Identities (`entity_id` -> Reference Map)",
     ]
@@ -1604,6 +1857,7 @@ def save_storyboard(
             "stage": 1,
             "target": str(project_dir / "assets" / "cover.png"),
             "prompt": cover_prompt,
+            "style_preset": style_info["style_preset"],
             "entity_references": all_cover_refs,
             "depends_on": None,
             "primary_composition_reference": None,
@@ -1660,6 +1914,7 @@ def save_storyboard(
                 "page_number": num,
                 "target": pkg["reality_target"],
                 "prompt": pkg["assembled_reality_prompt"],
+                "style_preset": style_info["style_preset"],
                 "entity_references": pkg["labeled_reference_files"],
                 "shared_composition": pkg["shared_composition"],
                 "depends_on": None,
@@ -1671,6 +1926,7 @@ def save_storyboard(
                 "page_number": num,
                 "target": pkg["imaginary_target"],
                 "prompt": pkg["assembled_imaginary_prompt"],
+                "style_preset": style_info["style_preset"],
                 "entity_references": pkg["labeled_reference_files"],
                 "shared_composition": pkg["shared_composition"],
                 "transformation_mappings": pkg["transformation_mappings"],
@@ -1686,6 +1942,7 @@ def save_storyboard(
                 "page_number": num,
                 "target": pkg["reality_target"],
                 "prompt": pkg["assembled_reality_prompt"],
+                "style_preset": style_info["style_preset"],
                 "entity_references": pkg["labeled_reference_files"],
                 "shared_composition": pkg["shared_composition"],
                 "depends_on": None,
@@ -1713,6 +1970,9 @@ def save_storyboard(
 
     return {
         "slug": slug,
+        "style_preset": style_info["style_preset"],
+        "style_preset_label": style_info["preset_label"],
+        "art_style": art_style,
         "storyboard_path": str(sb_path),
         "prompts_markdown_path": str(prompts_md_path),
         "validation_warnings": validation_warnings,
@@ -1720,6 +1980,707 @@ def save_storyboard(
         "capability_warnings": capability_warnings,
         "total_images_needed": len(required_images),
         "required_images": required_images,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Editable Markdown Book Plan — Dry-Run Planning Mode (Issue #12)
+# ---------------------------------------------------------------------------
+
+def _scaffold_default_storyboard_for_plan(
+    slug: str,
+    meta: Dict[str, Any],
+    resolved_entities: Dict[str, Dict[str, Any]],
+) -> Dict[str, Any]:
+    """
+    Create a structured, human-editable draft storyboard scaffold from `book_meta.json`,
+    `.env`, and `identities.json` when `generate_book_plan` is run before a custom
+    storyboard has been authored.
+    """
+    title = meta.get("title") or slug.replace("-", " ").title()
+    idea = meta.get("idea") or f"A cozy bedtime adventure about {title}."
+    mode = meta.get("mode") or "lift-the-flap"
+    bedtime_mode = bool(meta.get("bedtime_mode", False))
+    page_count = max(1, int(meta.get("page_count") or 8))
+    char_name = meta.get("character_name") or "Our Hero"
+    char_desc = meta.get("character_description") or "Friendly young child"
+    style_preset = meta.get("style_preset") or DEFAULT_STYLE_PRESET_KEY
+    style_notes = meta.get("style_notes") or ""
+    art_style = meta.get("art_style") or resolve_art_style(style_preset=style_preset, style_notes=style_notes)["art_style"]
+    cast_ids = list(meta.get("cast_ids") or list(resolved_entities.keys()))
+
+    prop_entity = None
+    for eid in cast_ids:
+        ent = resolved_entities.get(eid)
+        if ent and ent.get("kind") == "prop":
+            prop_entity = ent
+            break
+
+    prop_name = prop_entity.get("name", "everyday toy") if prop_entity else "everyday play setup"
+    prop_real = (prop_entity.get("reality_description") or prop_entity.get("appearance") or prop_name) if prop_entity else "Everyday play scene at home"
+    prop_imag = (prop_entity.get("imaginary_transformation") or f"Magical full-scale version of {prop_name}") if prop_entity else "Grand full-scale adventure world"
+
+    arc_templates = [
+        ("The Big Idea", "Setting Up the Adventure", "Eye-level medium shot", "Middle third", "Center foreground", f"{char_name} getting ready with {prop_name}"),
+        ("Ready to Begin", "Checking Every Detail", "Slightly low-angle medium shot", "Lower third", "Center-left foreground", f"{char_name} inspecting the setup with focused excitement"),
+        ("Into Action!", "The Adventure Takes Off", "Dynamic wide landscape shot", "Middle third", "Center", f"{char_name} steering into motion"),
+        ("A Curious Obstacle", "Wait—What Is That Ahead?", "Eye-level wide shot", "Middle third", "Left third looking right", f"{char_name} pausing to look closely at a surprise obstacle"),
+        ("A Clever Plan", "Finding a Creative Way Forward", "Close-medium shot", "Middle third", "Center foreground", f"{char_name} working out a clever solution"),
+        ("Full Speed Ahead", "Everything Works Together", "Wide panoramic shot", "Lower third", "Center-right", f"{char_name} celebrating as the plan succeeds"),
+        ("Heading Home", "Warm Golden-Hour Wind-Down", "Warm wide shot", "Middle third", "Right third heading toward home", f"{char_name} parking and waving as evening approaches"),
+        ("Cozy Goodnight", "Peaceful Bedtime Finale", "Gentle wide twilight shot", "Lower third", "Center", f"{char_name} looking back contentedly in cozy twilight glow"),
+    ]
+
+    pages: List[Dict[str, Any]] = []
+    for i in range(1, page_count + 1):
+        arc_idx = min(len(arc_templates) - 1, int((i - 1) * len(arc_templates) / max(1, page_count)))
+        beat_title, beat_sub, cam, horizon, placement, pose = arc_templates[arc_idx]
+        p_title = beat_title if page_count <= len(arc_templates) else f"{beat_title} (Part {i})"
+        is_wind_down = bedtime_mode and i > max(1, page_count - 2)
+        lighting_cue = "Warm, sleepy golden-twilight bedtime lighting." if is_wind_down else "Warm, inviting storybook lighting."
+
+        page_obj: Dict[str, Any] = {
+            "number": i,
+            "badge": f"Page {i}",
+            "title": p_title,
+            "paragraphs": [
+                f"[Page {i} — {beat_sub}] {char_name} explores the next step of the adventure: {idea}",
+            ],
+            "refrain": "Gentle sleepy sighs..." if is_wind_down else "",
+            "flap_prompt": "Lift the flap to see inside the imagination!",
+            "imagination_label": f"Inside {char_name}'s Imagination",
+            "entity_ids": cast_ids,
+            "shared_composition": {
+                "camera_angle": cam,
+                "horizon_line": horizon,
+                "focal_subject_placement": placement,
+                "character_pose": pose,
+                "key_shapes": [f"{char_name} silhouette", f"{prop_name} silhouette"],
+            },
+            "transformation_mappings": [
+                {
+                    "entity_id": prop_entity["id"] if prop_entity else (cast_ids[0] if cast_ids else "scene"),
+                    "reality_element": prop_real,
+                    "imaginary_element": prop_imag,
+                    "spatial_anchor": placement,
+                }
+            ],
+            "reality_prompt": (
+                f"Page {i} Reality scene ({p_title}): In the real-world home setting ({idea}), "
+                f"{pose}. Featuring {char_name} ({char_desc}) with {prop_real}. {lighting_cue}"
+            ),
+            "imaginary_prompt": (
+                f"Page {i} Imaginary scene under the flap ({p_title}): Matching Page {i} Reality's exact camera angle "
+                f"and character placement ({placement}), the everyday setting transforms into {prop_imag}! "
+                f"{char_name} is right in the same pose ({pose}). {lighting_cue}"
+            ),
+        }
+        pages.append(page_obj)
+
+    return {
+        "title": title,
+        "subtitle": "A Lift-the-Flap Bedtime Picture Book" if mode == "lift-the-flap" else "A Bedtime Picture Book",
+        "kicker": "Bedtime Story Edition" if bedtime_mode else "Interactive Storybook",
+        "mode": mode,
+        "bedtime_mode": bedtime_mode,
+        "style_preset": style_preset,
+        "style_notes": style_notes,
+        "art_style": art_style,
+        "cast_ids": cast_ids,
+        "character_bible": f"{char_name}: {char_desc}. Maintain consistent character proportions, outfit, and prop geometry on every page.",
+        "cover": {
+            "prompt": (
+                f"4:3 landscape children's picture-book cover illustration for '{title}'. "
+                f"{char_name} ({char_desc}) in the middle of the adventure ({idea}), "
+                f"bridging everyday play ({prop_real}) and wonder ({prop_imag})."
+            )
+        },
+        "pages": pages,
+        "end": {
+            "kicker": "The End",
+            "title": "Thanks for Reading!",
+            "subtitle": f"Read {title} again anytime.",
+            "bedtime_kicker": "Sweet Dreams",
+            "bedtime_title": f"Goodnight, {char_name}",
+            "bedtime_subtitle": "Time to close your eyes and drift off to sleep.",
+        },
+    }
+
+
+def generate_book_plan(
+    slug: str,
+    title: Optional[str] = None,
+    idea: Optional[str] = None,
+    storyboard: Optional[Dict[str, Any]] = None,
+    mode: Optional[str] = None,
+    page_count: Optional[int] = None,
+    style_preset: Optional[str] = None,
+    style_notes: Optional[str] = None,
+    bedtime_mode: Optional[bool] = None,
+    cast_ids: Optional[List[str]] = None,
+    entity_overrides: Optional[Dict[str, Dict[str, Any]]] = None,
+) -> Dict[str, Any]:
+    """
+    Dry-run planning mode (Issue #12):
+    Uses studio settings, persistent character/prop identities, art style presets, and the
+    story idea (or an existing storyboard) to create a self-contained, human-editable
+    `books/<slug>/book-plan.md` containing layout, narrative, visual direction, and
+    complete instructions—WITHOUT generating images or building the final HTML book site.
+    """
+    slug = slugify(slug or title or "book-plan")
+    project_dir = get_books_dir() / slug
+    meta_path = project_dir / "book_meta.json"
+    sb_path = project_dir / "storyboard.json"
+
+    if not meta_path.exists():
+        init_book_project(
+            slug=slug,
+            title=title or slug.replace("-", " ").title(),
+            idea=idea or f"A picture book adventure: {title or slug}",
+            mode=mode,
+            page_count=page_count,
+            cast_ids=cast_ids,
+            entity_overrides=entity_overrides,
+            bedtime_mode=bedtime_mode,
+            style_preset=style_preset,
+            style_notes=style_notes,
+        )
+
+    meta = json.loads(meta_path.read_text(encoding="utf-8"))
+    if title:
+        meta["title"] = title
+    if idea:
+        meta["idea"] = idea
+    if mode:
+        meta["mode"] = mode
+    if page_count is not None:
+        meta["page_count"] = int(page_count)
+    if bedtime_mode is not None:
+        meta["bedtime_mode"] = bool(bedtime_mode)
+    if cast_ids is not None:
+        meta["cast_ids"] = list(cast_ids)
+    if entity_overrides is not None:
+        meta["entity_overrides"] = dict(entity_overrides)
+
+    profile = get_studio_profile()
+    defaults = profile["defaults"]
+
+    # Resolve style preset & art style
+    existing_sb: Optional[Dict[str, Any]] = storyboard
+    if existing_sb is None and sb_path.exists():
+        try:
+            existing_sb = json.loads(sb_path.read_text(encoding="utf-8"))
+        except Exception:
+            existing_sb = None
+
+    chosen_preset = (
+        style_preset
+        or (existing_sb or {}).get("style_preset")
+        or meta.get("style_preset")
+        or defaults.get("style_preset")
+        or DEFAULT_STYLE_PRESET_KEY
+    )
+    chosen_notes = (
+        style_notes
+        if style_notes is not None
+        else ((existing_sb or {}).get("style_notes") or meta.get("style_notes") or "")
+    )
+    custom_art_style = (existing_sb or {}).get("art_style") if not style_preset else None
+    style_info = resolve_art_style(
+        style_preset=chosen_preset,
+        art_style=custom_art_style,
+        style_notes=chosen_notes,
+        default_preset=defaults.get("style_preset") or DEFAULT_STYLE_PRESET_KEY,
+    )
+
+    meta["style_preset"] = style_info["style_preset"]
+    meta["style_preset_label"] = style_info["preset_label"]
+    meta["style_notes"] = style_info["style_notes"]
+    meta["art_style"] = style_info["art_style"]
+    _atomic_write_text(meta_path, json.dumps(meta, indent=2, ensure_ascii=False))
+
+    resolved_entities = _resolve_book_entities(project_dir, existing_sb or {})
+
+    if existing_sb is not None:
+        sb_data = dict(existing_sb)
+        sb_data["style_preset"] = style_info["style_preset"]
+        sb_data["style_notes"] = style_info["style_notes"]
+        sb_data["art_style"] = style_info["art_style"]
+        if mode:
+            sb_data["mode"] = mode
+        if bedtime_mode is not None:
+            sb_data["bedtime_mode"] = bool(bedtime_mode)
+    else:
+        sb_data = _scaffold_default_storyboard_for_plan(slug, meta, resolved_entities)
+
+    val_res = validate_and_normalize_storyboard(sb_data, project_dir=project_dir, require_assets=False)
+    sb = val_res["normalized_storyboard"]
+
+    preset_catalog_lines = [
+        f"  - `{p['key']}` ({p['label']}): {p['description']}"
+        for p in list_style_presets()["presets"]
+    ]
+    cast_id_list = sb.get("cast_ids") or meta.get("cast_ids") or list(resolved_entities.keys())
+    cast_csv = ", ".join(cast_id_list)
+
+    entity_summary_lines: List[str] = []
+    for eid in cast_id_list:
+        ent = resolved_entities.get(eid)
+        if not ent:
+            continue
+        refs_str = ", ".join(f"`{r['path']}`" for r in (ent.get("book_references") or [])) or "Text-only"
+        entity_summary_lines.append(
+            f"- **`{eid}` ({ent.get('name')} — {ent.get('kind')})**: "
+            f"Size/Age: {ent.get('age_or_size') or 'N/A'} | Appearance: {ent.get('appearance') or 'N/A'} | "
+            f"Reality: {ent.get('reality_description') or ent.get('signature_outfit') or 'N/A'} | "
+            f"Imaginary: {ent.get('imaginary_transformation') or 'Same as reality'} | "
+            f"Refs: {refs_str}"
+        )
+    if not entity_summary_lines:
+        entity_summary_lines.append(
+            f"- **Main Character**: {meta.get('character_name')} ({meta.get('character_description')})"
+        )
+
+    plan_lines: List[str] = [
+        f"# Book Plan: {sb.get('title', slug)}",
+        "",
+        "> **DRY-RUN PLANNING MODE (`book-plan.md`)** — No images have been generated and no HTML site has been built yet.",
+        "> Review, save, or edit any section of this Markdown file before running image generation.",
+        "",
+        "## How to Edit & Execute This Plan",
+        "",
+        "1. **Edit Settings or Art Style Preset**: In **Section 1**, change `Style Preset` to any built-in preset (`watercolor-ink`, `bold-gouache` [Maisy style], `claymation`, `paper-cutout`, `crayon-storybook`, `retro-midcentury`) or add per-book `Style Notes`.",
+        "2. **Edit Story Narrative & Page Layout**: In **Section 4**, edit the story paragraphs under `#### Story Text`, change page titles (`### Page NN: Title`), add or remove pages, or adjust `Shared Composition Lock` and `Flap Transformation Mappings`.",
+        "3. **Edit Visual Direction**: Customize the scene descriptions under `#### Reality Visual Direction` and `#### Imaginary Visual Direction` on any page, or `#### Cover Visual Direction` in **Section 3**.",
+        "4. **Apply Your Edits (Still Dry-Run)**:",
+        "   - **CLI**: `python3 scripts/book_studio.py apply-plan --slug " + slug + "`",
+        "   - **MCP Tool**: `apply_book_plan(slug=\"" + slug + "\")`",
+        "   *(Validates your edits, updates `storyboard.json` + `prompts.md`, and builds `preview.html` so you can check the narrative & layout in your browser before generating art.)*",
+        "5. **Generate Illustrations & Build the Book**:",
+        "   - Generate each image listed in `prompts.md` (Cover + Stage 1 Reality pages first, then Stage 2 Imaginary flap pages using each page's Reality image as a composition reference).",
+        "   - Ingest images: `python3 scripts/book_studio.py ingest --slug " + slug + " --map-json '{\"cover\": \"...\"}'`",
+        "   - Build & host locally: `python3 scripts/book_studio.py publish --slug " + slug + "`",
+        "",
+        "---",
+        "",
+        "## 1. Book Settings & Art Style",
+        "",
+        f"- **Slug**: {slug}",
+        f"- **Title**: {sb.get('title', '')}",
+        f"- **Subtitle**: {sb.get('subtitle', 'A Lift-the-Flap Bedtime Picture Book')}",
+        f"- **Kicker**: {sb.get('kicker', 'Interactive Bedtime Storybook')}",
+        f"- **Story Idea**: {meta.get('idea', '')}",
+        f"- **Book Mode**: {sb.get('mode', 'lift-the-flap')}",
+        f"- **Bedtime Mode**: {'true' if sb.get('bedtime_mode') else 'false'}",
+        f"- **Style Preset**: {style_info['style_preset']}",
+        f"- **Style Notes**: {style_info['style_notes']}",
+        f"- **Resolved Art Style Prompt**: {style_info['art_style']}",
+        f"- **Cast Entity IDs**: {cast_csv}",
+        "",
+        "<!-- Available Style Presets you can set in `- **Style Preset**: ...` above:",
+        *preset_catalog_lines,
+        "-->",
+        "",
+        "---",
+        "",
+        "## 2. Character & Prop Continuity Bible",
+        "",
+        "### Assigned Cast & Props (Read-Only Summary from `identities.json`)",
+        *entity_summary_lines,
+        "",
+        "#### Character Bible Notes",
+        str(sb.get("character_bible") or "").strip(),
+        "",
+        "---",
+        "",
+        "## 3. Cover Plan",
+        "",
+        "#### Cover Visual Direction",
+        str((sb.get("cover") or {}).get("prompt") or "").strip(),
+        "",
+        "---",
+        "",
+        "## 4. Page-by-Page Plan (Layout, Narrative & Visual Direction)",
+        "",
+    ]
+
+    for p in sb.get("pages") or []:
+        num = int(p.get("number", 1))
+        p_title = p.get("title", f"Page {num}")
+        badge = p.get("badge") or f"Page {num}"
+        eids = ", ".join(p.get("entity_ids") or cast_id_list)
+        refrain = p.get("refrain") or ""
+        flap_prompt = p.get("flap_prompt") or "Lift the flap to see inside the imagination!"
+        imag_label = p.get("imagination_label") or "Inside the Imagination"
+        comp = p.get("shared_composition") or {}
+        key_shapes = comp.get("key_shapes") or []
+        shapes_str = ", ".join(key_shapes) if isinstance(key_shapes, list) else str(key_shapes)
+        mappings = p.get("transformation_mappings") or []
+
+        plan_lines.extend([
+            f"### Page {num:02d}: {p_title}",
+            f"- **Badge**: {badge}",
+            f"- **Active Entities**: {eids}",
+            f"- **Refrain**: {refrain}",
+            f"- **Flap Prompt**: {flap_prompt}",
+            f"- **Imagination Label**: {imag_label}",
+            "",
+            "#### Story Text",
+            "\n\n".join(p.get("paragraphs") or []),
+            "",
+            "#### Shared Composition Lock",
+            f"- **Camera Angle**: {comp.get('camera_angle', 'Eye-level medium-wide shot')}",
+            f"- **Horizon Line**: {comp.get('horizon_line', 'Middle third')}",
+            f"- **Subject Placement**: {comp.get('focal_subject_placement', 'Center foreground')}",
+            f"- **Character Pose**: {comp.get('character_pose', '')}",
+            f"- **Key Shapes**: {shapes_str}",
+            "",
+            "#### Flap Transformation Mappings",
+        ])
+        if mappings:
+            for m in mappings:
+                meid = m.get("entity_id") or ""
+                anchor = m.get("spatial_anchor") or "Scene"
+                r_el = m.get("reality_element") or ""
+                i_el = m.get("imaginary_element") or ""
+                prefix = f"[{meid}] @ {anchor}" if meid else f"@ {anchor}"
+                plan_lines.append(f"- `{prefix}`: {r_el} -> {i_el}")
+        else:
+            plan_lines.append("- `@ Center`: Everyday real-world scene -> Magical imaginary counterpart")
+
+        plan_lines.extend([
+            "",
+            "#### Reality Visual Direction",
+            str(p.get("reality_prompt") or "").strip(),
+            "",
+        ])
+        if sb.get("mode", "lift-the-flap") == "lift-the-flap" or p.get("imaginary_prompt"):
+            plan_lines.extend([
+                "#### Imaginary Visual Direction",
+                str(p.get("imaginary_prompt") or "").strip(),
+                "",
+            ])
+        plan_lines.extend(["---", ""])
+
+    end_info = sb.get("end") or {}
+    plan_lines.extend([
+        "## 5. End Card",
+        "",
+        f"- **Kicker**: {end_info.get('kicker', 'The End')}",
+        f"- **Title**: {end_info.get('title', 'Thanks for Reading!')}",
+        f"- **Subtitle**: {end_info.get('subtitle', '')}",
+        f"- **Bedtime Kicker**: {end_info.get('bedtime_kicker', 'Sweet Dreams')}",
+        f"- **Bedtime Title**: {end_info.get('bedtime_title', 'Goodnight!')}",
+        f"- **Bedtime Subtitle**: {end_info.get('bedtime_subtitle', 'Time to close your eyes and drift off to sleep.')}",
+        "",
+    ])
+
+    plan_path = project_dir / "book-plan.md"
+    _atomic_write_text(plan_path, "\n".join(plan_lines))
+
+    return {
+        "status": "dry_run_plan_created",
+        "dry_run": True,
+        "images_generated": 0,
+        "site_built": False,
+        "slug": slug,
+        "book_plan_path": str(plan_path),
+        "style_preset": style_info["style_preset"],
+        "style_preset_label": style_info["preset_label"],
+        "art_style": style_info["art_style"],
+        "mode": sb.get("mode", "lift-the-flap"),
+        "bedtime_mode": bool(sb.get("bedtime_mode", False)),
+        "page_count": len(sb.get("pages") or []),
+        "next_step_instructions": (
+            f"Review or edit `{plan_path}`. When ready, call `apply_book_plan(slug='{slug}')` "
+            f"(or `python3 scripts/book_studio.py apply-plan --slug {slug}`) to compile your edited plan "
+            "into `storyboard.json`, `prompts.md`, and `preview.html`."
+        ),
+    }
+
+
+def _extract_md_Subsections(section_body: str) -> Dict[str, str]:
+    """Split a Markdown section by `#### Heading` into a dict of `{lowercase_heading: body_text}`."""
+    result: Dict[str, str] = {"_header": ""}
+    current_key = "_header"
+    buf: List[str] = []
+    for line in section_body.splitlines():
+        m = re.match(r"^\s*####\s+(.+?)\s*$", line)
+        if m:
+            result[current_key] = "\n".join(buf).strip()
+            current_key = m.group(1).strip().lower()
+            buf = []
+        else:
+            buf.append(line)
+    result[current_key] = "\n".join(buf).strip()
+    return result
+
+
+def _parse_md_bullets(text: str) -> Dict[str, str]:
+    """Parse `- **Key**: Value` lines into `{lowercase_key: value}`."""
+    out: Dict[str, str] = {}
+    for line in text.splitlines():
+        m = re.match(r"^\s*-\s*\*\*(.+?)\*\*\s*:\s*(.*?)\s*$", line)
+        if m:
+            out[m.group(1).strip().lower()] = m.group(2).strip()
+    return out
+
+
+def parse_book_plan_markdown(
+    md_text: str,
+    fallback_storyboard: Optional[Dict[str, Any]] = None,
+) -> Dict[str, Any]:
+    """
+    Parse an edited `book-plan.md` document back into a canonical `storyboard.json` dictionary.
+    Supports user edits to settings, style presets/notes, cover prompt, page count/order,
+    story paragraphs, shared composition locks, transformation mappings, and visual prompts.
+    """
+    sb: Dict[str, Any] = json.loads(json.dumps(fallback_storyboard)) if fallback_storyboard else {}
+
+    # Strip HTML comments before parsing
+    cleaned_md = re.sub(r"<!--.*?-->", "", md_text, flags=re.DOTALL)
+
+    # Extract top-level `# Book Plan: <Title>` if present
+    title_match = re.search(r"^\s*#\s+Book Plan:\s*(.+?)\s*$", cleaned_md, flags=re.MULTILINE)
+    if title_match:
+        sb["title"] = title_match.group(1).strip()
+
+    # Split by `## ` level-2 headings
+    h2_sections: Dict[str, str] = {}
+    current_h2 = "_intro"
+    h2_buf: List[str] = []
+    for line in cleaned_md.splitlines():
+        m = re.match(r"^\s*##\s+(.+?)\s*$", line)
+        if m:
+            h2_sections[current_h2] = "\n".join(h2_buf).strip()
+            current_h2 = m.group(1).strip().lower()
+            h2_buf = []
+        else:
+            h2_buf.append(line)
+    h2_sections[current_h2] = "\n".join(h2_buf).strip()
+
+    # 1. Settings section
+    for sec_name, sec_body in h2_sections.items():
+        if "book settings" in sec_name or sec_name.startswith("1."):
+            bullets = _parse_md_bullets(sec_body)
+            if bullets.get("title"):
+                sb["title"] = bullets["title"]
+            if "subtitle" in bullets:
+                sb["subtitle"] = bullets["subtitle"]
+            if "kicker" in bullets:
+                sb["kicker"] = bullets["kicker"]
+            if bullets.get("book mode"):
+                sb["mode"] = bullets["book mode"].strip().lower()
+            if "bedtime mode" in bullets:
+                sb["bedtime_mode"] = bullets["bedtime mode"].strip().lower() in ("true", "yes", "1", "on")
+            if "cast entity ids" in bullets:
+                sb["cast_ids"] = [x.strip() for x in bullets["cast entity ids"].split(",") if x.strip()]
+
+            raw_preset = bullets.get("style preset") or sb.get("style_preset") or DEFAULT_STYLE_PRESET_KEY
+            raw_notes = bullets.get("style notes", sb.get("style_notes", ""))
+            raw_art_style = bullets.get("resolved art style prompt") or bullets.get("art style")
+
+            # If the user changed the preset in book-plan.md, let the preset drive the base art style
+            # unless they explicitly customized the Resolved Art Style Prompt away from the previous preset.
+            prev_preset = (fallback_storyboard or {}).get("style_preset")
+            prev_art_style = (fallback_storyboard or {}).get("art_style")
+            use_custom_art_style = (
+                raw_art_style
+                if (raw_art_style and raw_preset == prev_preset and raw_art_style != prev_art_style)
+                else None
+            )
+            style_info = resolve_art_style(
+                style_preset=raw_preset,
+                art_style=use_custom_art_style,
+                style_notes=raw_notes,
+            )
+            sb["style_preset"] = style_info["style_preset"]
+            sb["style_notes"] = style_info["style_notes"]
+            sb["art_style"] = style_info["art_style"]
+
+        elif "continuity bible" in sec_name or sec_name.startswith("2."):
+            subs = _extract_md_Subsections(sec_body)
+            if subs.get("character bible notes"):
+                sb["character_bible"] = subs["character bible notes"].strip()
+
+        elif "cover plan" in sec_name or sec_name.startswith("3."):
+            subs = _extract_md_Subsections(sec_body)
+            cover_prompt = subs.get("cover visual direction") or sec_body.strip()
+            cover_prompt = re.sub(r"^---+\s*$", "", cover_prompt, flags=re.MULTILINE).strip()
+            if cover_prompt:
+                sb["cover"] = {"prompt": cover_prompt}
+
+        elif "page-by-page" in sec_name or sec_name.startswith("4."):
+            # Split into `### Page NN: Title` blocks
+            page_blocks: List[Tuple[str, str]] = []
+            cur_p_header: Optional[str] = None
+            cur_p_lines: List[str] = []
+            for line in sec_body.splitlines():
+                pm = re.match(r"^\s*###\s+Page\s+\d+\s*[:\-—]\s*(.+?)\s*$", line, flags=re.IGNORECASE)
+                if pm:
+                    if cur_p_header is not None:
+                        page_blocks.append((cur_p_header, "\n".join(cur_p_lines).strip()))
+                    cur_p_header = pm.group(1).strip()
+                    cur_p_lines = []
+                else:
+                    if cur_p_header is not None:
+                        cur_p_lines.append(line)
+            if cur_p_header is not None:
+                page_blocks.append((cur_p_header, "\n".join(cur_p_lines).strip()))
+
+            parsed_pages: List[Dict[str, Any]] = []
+            for idx, (p_title, p_body) in enumerate(page_blocks, start=1):
+                p_body_clean = re.sub(r"^---+\s*$", "", p_body, flags=re.MULTILINE).strip()
+                subs = _extract_md_Subsections(p_body_clean)
+                header_bullets = _parse_md_bullets(subs.get("_header", ""))
+
+                story_raw = subs.get("story text", "").strip()
+                paragraphs = [
+                    para.strip()
+                    for para in re.split(r"\n\s*\n", story_raw)
+                    if para.strip()
+                ]
+
+                comp_bullets = _parse_md_bullets(subs.get("shared composition lock", ""))
+                key_shapes_raw = comp_bullets.get("key shapes", "")
+                key_shapes = [s.strip() for s in key_shapes_raw.split(",") if s.strip()]
+                shared_comp = {
+                    "camera_angle": comp_bullets.get("camera angle", ""),
+                    "horizon_line": comp_bullets.get("horizon line", ""),
+                    "focal_subject_placement": comp_bullets.get("subject placement", ""),
+                    "character_pose": comp_bullets.get("character pose", ""),
+                    "key_shapes": key_shapes,
+                }
+
+                mappings: List[Dict[str, str]] = []
+                for mline in subs.get("flap transformation mappings", "").splitlines():
+                    mline = mline.strip()
+                    if not mline.startswith("-"):
+                        continue
+                    # Format: - `[entity_id] @ anchor`: reality -> imaginary
+                    mm = re.match(
+                        r"^-\s*`?(?:\[([^\]]+)\]\s*)?(?:@\s*([^:`]+?))?`?\s*:\s*(.+?)\s*(?:->|➡️)\s*(.+?)\s*$",
+                        mline,
+                    )
+                    if mm:
+                        meid, anchor, r_el, i_el = mm.groups()
+                        m_entry: Dict[str, str] = {
+                            "reality_element": r_el.strip(),
+                            "imaginary_element": i_el.strip(),
+                            "spatial_anchor": (anchor or "Scene").strip(),
+                        }
+                        if meid:
+                            m_entry["entity_id"] = meid.strip()
+                        mappings.append(m_entry)
+
+                eids_raw = header_bullets.get("active entities", "")
+                eids = [x.strip().strip("`") for x in eids_raw.split(",") if x.strip()]
+
+                page_dict: Dict[str, Any] = {
+                    "number": idx,
+                    "badge": header_bullets.get("badge") or f"Page {idx}",
+                    "title": p_title,
+                    "paragraphs": paragraphs,
+                    "refrain": header_bullets.get("refrain", ""),
+                    "flap_prompt": header_bullets.get("flap prompt", ""),
+                    "imagination_label": header_bullets.get("imagination label", ""),
+                    "entity_ids": eids,
+                    "shared_composition": shared_comp,
+                    "transformation_mappings": mappings,
+                    "reality_prompt": subs.get("reality visual direction", "").strip(),
+                }
+                imag_dir = subs.get("imaginary visual direction", "").strip()
+                if imag_dir or sb.get("mode", "lift-the-flap") == "lift-the-flap":
+                    page_dict["imaginary_prompt"] = imag_dir
+                parsed_pages.append(page_dict)
+
+            if parsed_pages:
+                sb["pages"] = parsed_pages
+
+        elif "end card" in sec_name or sec_name.startswith("5."):
+            eb = _parse_md_bullets(sec_body)
+            sb["end"] = {
+                "kicker": eb.get("kicker", "The End"),
+                "title": eb.get("title", "Thanks for Reading!"),
+                "subtitle": eb.get("subtitle", ""),
+                "bedtime_kicker": eb.get("bedtime kicker", "Sweet Dreams"),
+                "bedtime_title": eb.get("bedtime title", "Goodnight!"),
+                "bedtime_subtitle": eb.get("bedtime subtitle", ""),
+            }
+
+    return sb
+
+
+def apply_book_plan(
+    slug: str,
+    plan_path: Optional[str] = None,
+    supports_reference_images: bool = True,
+) -> Dict[str, Any]:
+    """
+    Parse an edited `books/<slug>/book-plan.md`, validate the resulting storyboard,
+    save `storyboard.json` + `prompts.md`, and generate the `preview.html` contact sheet
+    (still without generating images or building the final reader site until requested).
+    """
+    slug = slugify(slug)
+    project_dir = get_books_dir() / slug
+    resolved_plan_path = Path(os.path.expanduser(plan_path)).resolve() if plan_path else (project_dir / "book-plan.md")
+    if not resolved_plan_path.exists():
+        raise FileNotFoundError(f"Book plan Markdown file not found: {resolved_plan_path}")
+
+    existing_sb: Optional[Dict[str, Any]] = None
+    sb_path = project_dir / "storyboard.json"
+    if sb_path.exists():
+        try:
+            existing_sb = json.loads(sb_path.read_text(encoding="utf-8"))
+        except Exception:
+            existing_sb = None
+
+    md_text = resolved_plan_path.read_text(encoding="utf-8")
+    parsed_sb = parse_book_plan_markdown(md_text, fallback_storyboard=existing_sb)
+
+    # Sync updated metadata back to book_meta.json if present
+    meta_path = project_dir / "book_meta.json"
+    if meta_path.exists():
+        try:
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
+        except Exception:
+            meta = {"slug": slug}
+    else:
+        meta = {"slug": slug}
+
+    meta["title"] = parsed_sb.get("title", meta.get("title", slug))
+    meta["mode"] = parsed_sb.get("mode", meta.get("mode", "lift-the-flap"))
+    meta["bedtime_mode"] = bool(parsed_sb.get("bedtime_mode", meta.get("bedtime_mode", False)))
+    meta["style_preset"] = parsed_sb.get("style_preset", meta.get("style_preset", DEFAULT_STYLE_PRESET_KEY))
+    meta["style_notes"] = parsed_sb.get("style_notes", meta.get("style_notes", ""))
+    meta["art_style"] = parsed_sb.get("art_style", meta.get("art_style", ""))
+    meta["page_count"] = len(parsed_sb.get("pages") or [])
+    if parsed_sb.get("cast_ids"):
+        meta["cast_ids"] = parsed_sb["cast_ids"]
+    _atomic_write_text(meta_path, json.dumps(meta, indent=2, ensure_ascii=False))
+
+    saved = save_storyboard(
+        slug=slug,
+        storyboard=parsed_sb,
+        supports_reference_images=supports_reference_images,
+    )
+    preview = generate_book_preview(slug=slug)
+
+    return {
+        "status": "book_plan_applied",
+        "slug": slug,
+        "book_plan_path": str(resolved_plan_path),
+        "storyboard_path": saved["storyboard_path"],
+        "prompts_markdown_path": saved["prompts_markdown_path"],
+        "preview_html": preview["preview_html"],
+        "preview_html_path": preview["preview_html"],
+        "style_preset": saved["style_preset"],
+        "style_preset_label": saved["style_preset_label"],
+        "art_style": saved["art_style"],
+        "page_count": len(parsed_sb.get("pages") or []),
+        "total_images_needed": saved["total_images_needed"],
+        "validation_warnings": saved["validation_warnings"],
+        "required_images": saved["required_images"],
     }
 
 
@@ -2669,6 +3630,7 @@ def main() -> None:
     sub.add_parser("status", help="Show onboarding status and current .env profile as JSON")
     sub.add_parser("profile", help="Print the active studio profile from .env")
     sub.add_parser("list", help="List all books in BOOKS_OUTPUT_DIR")
+    sub.add_parser("style-presets", help="List built-in art style presets and their aliases")
 
     p_ids = sub.add_parser("identities", help="List persistent character, pet, and prop identities")
     p_ids.add_argument("--kind", choices=list(VALID_ENTITY_KINDS), default=None)
@@ -2706,7 +3668,8 @@ def main() -> None:
     p_cfg.add_argument("--photos", nargs="*", help="Paths to main character reference photos")
     p_cfg.add_argument("--supporting", help="Supporting characters description")
     p_cfg.add_argument("--props", help="Recurring toys/props description")
-    p_cfg.add_argument("--style", help="Default art style prompt")
+    p_cfg.add_argument("--style-preset", help="Default art style preset (e.g. watercolor-ink, bold-gouache, claymation)")
+    p_cfg.add_argument("--style", help="Default custom art style prompt override")
     p_cfg.add_argument("--mode", choices=["lift-the-flap", "standard"], help="Default book mode")
     p_cfg.add_argument("--bedtime-mode", choices=["true", "false"], default=None)
     p_cfg.add_argument("--pages", type=int, help="Default story page count")
@@ -2727,6 +3690,32 @@ def main() -> None:
     p_init.add_argument("--refs", nargs="*", default=None)
     p_init.add_argument("--pages", type=int, default=None)
     p_init.add_argument("--bedtime-mode", action="store_true", default=None)
+    p_init.add_argument("--style-preset", default=None, help="Per-book art style preset")
+    p_init.add_argument("--style-notes", default=None, help="Per-book art style notes appended to the preset")
+    p_init.add_argument("--art-style", default=None, help="Custom per-book art style prompt")
+
+    p_plan = sub.add_parser(
+        "plan",
+        help="Dry-run planning mode: create an editable books/<slug>/book-plan.md before image generation",
+    )
+    p_plan.add_argument("--slug", required=True)
+    p_plan.add_argument("--title", default=None)
+    p_plan.add_argument("--idea", default=None)
+    p_plan.add_argument("--mode", choices=["lift-the-flap", "standard"], default=None)
+    p_plan.add_argument("--pages", type=int, default=None)
+    p_plan.add_argument("--style-preset", default=None, help="Art style preset (e.g. watercolor-ink, bold-gouache, claymation)")
+    p_plan.add_argument("--style-notes", default=None, help="Additional per-book style notes")
+    p_plan.add_argument("--bedtime-mode", choices=["true", "false"], default=None)
+    p_plan.add_argument("--cast-ids", nargs="*", default=None)
+    p_plan.add_argument("--overrides-json", default=None)
+
+    p_aplan = sub.add_parser(
+        "apply-plan",
+        help="Apply an edited book-plan.md into storyboard.json, prompts.md, and preview.html",
+    )
+    p_aplan.add_argument("--slug", required=True)
+    p_aplan.add_argument("--plan-path", default=None, help="Optional custom path to book-plan.md")
+    p_aplan.add_argument("--no-ref-support", action="store_true", help="Indicate image tool cannot take image refs")
 
     p_sb = sub.add_parser("storyboard", help="Validate storyboard.json and generate prompts.md")
     p_sb.add_argument("--slug", required=True)
@@ -2793,6 +3782,8 @@ def main() -> None:
         print(json.dumps(get_studio_profile(), indent=2))
     elif args.cmd == "list":
         print(json.dumps(list_books(), indent=2))
+    elif args.cmd == "style-presets":
+        print(json.dumps(list_style_presets(), indent=2))
     elif args.cmd == "identities":
         print(json.dumps(list_identities(kind=args.kind), indent=2))
     elif args.cmd == "upsert-identity":
@@ -2835,6 +3826,7 @@ def main() -> None:
             main_character_photos=args.photos,
             supporting_characters=args.supporting,
             recurring_props=args.props,
+            default_style_preset=args.style_preset,
             default_art_style=args.style,
             default_book_mode=args.mode,
             default_bedtime_mode=(args.bedtime_mode == "true") if args.bedtime_mode is not None else None,
@@ -2859,6 +3851,32 @@ def main() -> None:
             cast_ids=args.cast_ids,
             entity_overrides=overrides,
             bedtime_mode=args.bedtime_mode,
+            style_preset=args.style_preset,
+            style_notes=args.style_notes,
+            art_style=args.art_style,
+        )
+        print(json.dumps(res, indent=2))
+    elif args.cmd == "plan":
+        overrides = json.loads(args.overrides_json) if args.overrides_json else None
+        bm = (args.bedtime_mode == "true") if args.bedtime_mode is not None else None
+        res = generate_book_plan(
+            slug=args.slug,
+            title=args.title,
+            idea=args.idea,
+            mode=args.mode,
+            page_count=args.pages,
+            style_preset=args.style_preset,
+            style_notes=args.style_notes,
+            bedtime_mode=bm,
+            cast_ids=args.cast_ids,
+            entity_overrides=overrides,
+        )
+        print(json.dumps(res, indent=2))
+    elif args.cmd == "apply-plan":
+        res = apply_book_plan(
+            slug=args.slug,
+            plan_path=args.plan_path,
+            supports_reference_images=not args.no_ref_support,
         )
         print(json.dumps(res, indent=2))
     elif args.cmd == "storyboard":

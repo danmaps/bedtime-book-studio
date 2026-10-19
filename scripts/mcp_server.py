@@ -46,6 +46,7 @@ def configure_studio(
     main_character_photos: Optional[List[str]] = None,
     supporting_characters: Optional[str] = None,
     recurring_props: Optional[str] = None,
+    default_style_preset: Optional[str] = None,
     default_art_style: Optional[str] = None,
     default_book_mode: Optional[str] = None,
     default_bedtime_mode: Optional[bool] = None,
@@ -58,6 +59,8 @@ def configure_studio(
     """
     Save or update user onboarding settings in the local gitignored `.env` file and sync
     with `local_profile/identities.json`.
+    `default_style_preset` can be `'watercolor-ink'`, `'bold-gouache'` (Maisy-style bold outlines),
+    `'claymation'`, `'paper-cutout'`, `'crayon-storybook'`, or `'retro-midcentury'`.
     """
     res = book_studio.configure_studio(
         main_character_name=main_character_name,
@@ -67,6 +70,7 @@ def configure_studio(
         main_character_photos=main_character_photos,
         supporting_characters=supporting_characters,
         recurring_props=recurring_props,
+        default_style_preset=default_style_preset,
         default_art_style=default_art_style,
         default_book_mode=default_book_mode,
         default_bedtime_mode=default_bedtime_mode,
@@ -80,10 +84,20 @@ def configure_studio(
 
 
 @mcp.tool()
+def list_art_style_presets() -> str:
+    """
+    List all built-in art style presets (`watercolor-ink`, `bold-gouache` [Maisy style],
+    `claymation`, `paper-cutout`, `crayon-storybook`, `retro-midcentury`), their natural
+    shorthand aliases, and their complete style prompts.
+    """
+    return json.dumps(book_studio.list_style_presets(), indent=2)
+
+
+@mcp.tool()
 def get_studio_profile() -> str:
     """
     Return the active studio profile from `.env` and `local_profile/identities.json`,
-    including persistent character/pet/prop identities, default art style, book mode,
+    including persistent character/pet/prop identities, default art style preset, book mode,
     bedtime mode preference, and local hosting paths.
     """
     return json.dumps(book_studio.get_studio_profile(), indent=2)
@@ -165,7 +179,7 @@ def manage_identity_reference(
 
 @mcp.tool()
 def list_existing_books() -> str:
-    """List all bedtime picture-book projects in `BOOKS_OUTPUT_DIR`, their single-file HTML path, preview path, and local URLs."""
+    """List all bedtime picture-book projects in `BOOKS_OUTPUT_DIR`, their `book-plan.md` path, single-file HTML path, preview path, and local URLs."""
     return json.dumps(book_studio.list_books(), indent=2)
 
 
@@ -182,12 +196,16 @@ def create_book_project(
     cast_ids: Optional[List[str]] = None,
     entity_overrides: Optional[Dict[str, Dict[str, Any]]] = None,
     bedtime_mode: Optional[bool] = None,
+    style_preset: Optional[str] = None,
+    style_notes: Optional[str] = None,
+    art_style: Optional[str] = None,
 ) -> str:
     """
     Step 1: Initialize a new bedtime picture-book project workspace.
-    Supports selecting persistent `cast_ids` (characters, pets, props) and passing per-book
-    `entity_overrides` (e.g., special pajamas or costume for this book) without changing
-    the global profile.
+    Supports selecting persistent `cast_ids` (characters, pets, props), per-book
+    `entity_overrides`, and per-book `style_preset` (`watercolor-ink`, `bold-gouache`,
+    `claymation`, `paper-cutout`, `crayon-storybook`, `retro-midcentury`) or `style_notes`
+    without changing the global profile.
     """
     res = book_studio.init_book_project(
         slug=slug,
@@ -201,6 +219,65 @@ def create_book_project(
         cast_ids=cast_ids,
         entity_overrides=entity_overrides,
         bedtime_mode=bedtime_mode,
+        style_preset=style_preset,
+        style_notes=style_notes,
+        art_style=art_style,
+    )
+    return json.dumps(res, indent=2)
+
+
+@mcp.tool()
+def create_book_plan(
+    slug: str,
+    title: Optional[str] = None,
+    idea: Optional[str] = None,
+    storyboard: Optional[Dict[str, Any]] = None,
+    mode: Optional[str] = None,
+    page_count: Optional[int] = None,
+    style_preset: Optional[str] = None,
+    style_notes: Optional[str] = None,
+    bedtime_mode: Optional[bool] = None,
+    cast_ids: Optional[List[str]] = None,
+    entity_overrides: Optional[Dict[str, Dict[str, Any]]] = None,
+) -> str:
+    """
+    Dry-Run Planning Mode (Step 1b):
+    Create a self-contained, human-editable Markdown book plan (`books/<slug>/book-plan.md`)
+    using studio settings, cast identities, and art style presets WITHOUT generating any
+    images or building the HTML book site. Users can review, save, or edit the layout,
+    narrative, and visual direction in `book-plan.md`, then call `apply_book_plan`.
+    """
+    res = book_studio.generate_book_plan(
+        slug=slug,
+        title=title,
+        idea=idea,
+        storyboard=storyboard,
+        mode=mode,
+        page_count=page_count,
+        style_preset=style_preset,
+        style_notes=style_notes,
+        bedtime_mode=bedtime_mode,
+        cast_ids=cast_ids,
+        entity_overrides=entity_overrides,
+    )
+    return json.dumps(res, indent=2)
+
+
+@mcp.tool()
+def apply_book_plan(
+    slug: str,
+    plan_path: Optional[str] = None,
+    supports_reference_images: bool = True,
+) -> str:
+    """
+    Compile an edited `books/<slug>/book-plan.md` back into canonical `storyboard.json`,
+    assemble `prompts.md` + the image generation plan, and build `preview.html` (still
+    without generating images or building the final reader site until requested).
+    """
+    res = book_studio.apply_book_plan(
+        slug=slug,
+        plan_path=plan_path,
+        supports_reference_images=supports_reference_images,
     )
     return json.dumps(res, indent=2)
 
@@ -213,9 +290,9 @@ def save_book_storyboard(
 ) -> str:
     """
     Step 2: Save `storyboard.json` and assemble `prompts.md` + the two-stage generation plan.
-    Automatically binds entity IDs to their labeled references, injects `shared_composition`
-    and `transformation_mappings`, and chains `page-XX-reality.png` as the primary composition
-    reference for `page-XX-imaginary.png` (or reports a `capability_warning` if `supports_reference_images=False`).
+    Automatically resolves `style_preset` / `style_notes`, binds entity IDs to their labeled
+    references, injects `shared_composition` and `transformation_mappings`, and chains
+    `page-XX-reality.png` as the primary composition reference for `page-XX-imaginary.png`.
     """
     res = book_studio.save_storyboard(
         slug=slug,

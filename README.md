@@ -104,11 +104,41 @@ All of these settings live in your local `.env` file. You can re-run onboarding 
 
 Once connected, just ask your AI agent in plain English:
 
-> *"Make a new lift-the-flap bedtime book! Here's a photo of our cardboard box (`/path/to/box.jpg`). The story is about turning a cardboard moving box in the living room into a rocket ship landing on the moon."*
+> *"Make a new lift-the-flap bedtime book in bold Maisy style! Here's a photo of our cardboard box (`/path/to/box.jpg`). The story is about turning a cardboard moving box in the living room into a rocket ship landing on the moon."*
+
+### 🎨 Built-In Art Style Presets
+You can set a default style preset in `.env` (`DEFAULT_STYLE_PRESET`) or pick a different style per book (`--style-preset`):
+
+| Preset Key | Aliases | Visual Aesthetic |
+| :--- | :--- | :--- |
+| `watercolor-ink` *(Default)* | `watercolor`, `ink-watercolor`, `classic` | Clean hand-drawn ink linework with gentle flat watercolor washes on warm cream paper |
+| `bold-gouache` | `maisy`, `bold-outlines`, `gouache` | Bold expressive black brush outlines with vibrant flat gouache colors (Maisy-inspired) |
+| `claymation` | `clay`, `stop-motion`, `plasticine` | Handcrafted 3D stop-motion plasticine clay diorama with soft miniature studio lighting |
+| `paper-cutout` | `collage`, `eric-carle`, `cut-paper` | Layered hand-painted tissue paper and textured cut-paper collage with crisp scissor edges |
+| `crayon-storybook` | `crayon`, `pastel`, `colored-pencil` | Cozy hand-drawn wax crayon, oil pastel, and colored pencil on warm toothy paper |
+| `retro-midcentury` | `retro`, `little-golden-book`, `midcentury` | 1950s mid-century Little Golden Book vintage gouache and warm lithograph print texture |
+
+### 📝 Optional Dry-Run Planning Mode (`book-plan.md`)
+Want to review or tweak the story text, page count, flap reveals, and visual prompts **before** spending time or credits generating illustrations? Ask your agent for a **dry-run book plan** (or run `plan` from the CLI):
+
+```bash
+# 1. Create a self-contained, editable Markdown plan (0 images generated, no site built yet)
+./.venv/bin/python scripts/book_studio.py plan \
+  --slug "leos-cardboard-rocket" \
+  --title "Leo's Cardboard Rocket" \
+  --idea "Leo turns a cardboard moving box in the living room into a lunar rocket ship" \
+  --style-preset "bold-gouache"
+
+# 2. Open and edit books/leos-cardboard-rocket/book-plan.md in any editor
+#    (change story paragraphs, page titles, style preset, flap transformations, or visual prompts)
+
+# 3. Apply your edits into storyboard.json + prompts.md + preview.html
+./.venv/bin/python scripts/book_studio.py apply-plan --slug "leos-cardboard-rocket"
+```
 
 ### What Happens Behind the Scenes:
-1. **`create_book_project`**: Scaffolds `books/<slug>/` and copies your default character photo(s) from `.env` plus any new prop photo(s).
-2. **`save_book_storyboard`**: Writes `storyboard.json` and `prompts.md` with locked character continuity and matching **Reality** + **Imaginary** scene prompts for every page.
+1. **`create_book_project` / `create_book_plan`**: Scaffolds `books/<slug>/` (and optionally `books/<slug>/book-plan.md` for dry-run editing), resolving your character/pet/prop identities and chosen `style_preset`.
+2. **`save_book_storyboard` / `apply_book_plan`**: Writes `storyboard.json`, `prompts.md`, and `preview.html` with locked character continuity and matching **Reality** + **Imaginary** scene prompts for every page.
 3. **`ingest_generated_images`**: Your agent generates the illustrations, and Bedtime Book Studio center-crops every image to `1280x960` (4:3 landscape) and exports `.png` + `.webp`.
 4. **`build_and_publish_book`**:
    - Generates the **single-file standalone HTML book** at `books/<slug>.html` (and `books/<slug>/<slug>.html`).
@@ -169,13 +199,16 @@ Whenever a book is published, Bedtime Book Studio will automatically copy the bu
 | MCP Tool | CLI Command | Description |
 | :--- | :--- | :--- |
 | `get_onboarding_status` | `book_studio.py status` | Check if `.env` onboarding is complete and get onboarding instructions |
-| `configure_studio` | `book_studio.py onboard` / `configure` | Save character photo(s), text description, outfit, and defaults to `.env` |
+| `configure_studio` | `book_studio.py onboard` / `configure` | Save character photo(s), text description, outfit, style preset, and defaults to `.env` |
+| `list_art_style_presets` | `book_studio.py style-presets` | List built-in art style presets (`watercolor-ink`, `bold-gouache`, `claymation`, etc.) and aliases |
 | `get_studio_profile` | `book_studio.py profile` | View the active character, identities, and studio configuration |
 | `list_identities` | `book_studio.py identities` | List persistent characters, siblings, pets, and props (`local_profile/identities.json`) |
 | `upsert_identity` | `book_studio.py upsert-identity` | Create/update an entity with a stable ID (`char-...`, `pet-...`, `prop-...`) and reality vs. imaginary rules |
 | `manage_identity_reference` | `book_studio.py identity-ref` | Add, relabel, or include/exclude (`--active false`) an individual reference photo |
-| `list_existing_books` | `book_studio.py list` | List all generated books, single-file HTML paths, preview sheets, and local URLs |
-| `create_book_project` | `book_studio.py init` | Scaffold a new book project with selected `cast_ids` and per-book `entity_overrides` |
+| `list_existing_books` | `book_studio.py list` | List all generated books, `book-plan.md` files, single-file HTML paths, preview sheets, and local URLs |
+| `create_book_project` | `book_studio.py init` | Scaffold a new book project with selected `cast_ids`, `style_preset`, and per-book `entity_overrides` |
+| `create_book_plan` | `book_studio.py plan` | Dry-run mode: create an editable `books/<slug>/book-plan.md` with layout, narrative, and visual direction |
+| `apply_book_plan` | `book_studio.py apply-plan` | Parse an edited `book-plan.md` into `storyboard.json`, `prompts.md`, and `preview.html` |
 | `save_book_storyboard` | `book_studio.py storyboard` | Validate & normalize `storyboard.json`, transformation mappings, and reference-chained `prompts.md` |
 | `validate_book_storyboard` | `book_studio.py validate` | Validate `storyboard.json` against canonical schema and optionally check required image assets (`--require-assets`) |
 | `generate_book_preview` | `book_studio.py preview` | Generate `preview.html` contact sheet, alignment inspector, and Local Wi-Fi QR code (`qr-lan.svg`) |

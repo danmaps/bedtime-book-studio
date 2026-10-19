@@ -32,25 +32,54 @@ To prevent mixing up siblings, pets, or recurring toys across books, store each 
 
 ---
 
-## Step 1: Initialize the Book Project (`create_book_project`)
+## Step 1: Initialize the Book Project & Choose Art Style Preset (`create_book_project` / `list_art_style_presets`)
 
-Initialize the new book workspace, selecting `cast_ids` and optional per-book `entity_overrides` (e.g. a special outfit for this story without changing the global profile):
-- **Via MCP tool**: `create_book_project(slug, title, idea, cast_ids=[...], entity_overrides={...}, bedtime_mode=True)`
+Initialize the new book workspace, selecting `cast_ids`, optional per-book `entity_overrides` (e.g. a special outfit for this story without changing the global profile), and an optional `style_preset` or `style_notes`:
+- **Built-in Art Style Presets (`list_art_style_presets`)**:
+  - `watercolor-ink` *(default; alias `watercolor`)*: Classic hand-drawn ink linework with soft watercolor washes.
+  - `bold-gouache` *(aliases `maisy`, `bold-outlines`, `gouache`)*: Thick expressive black outlines with vibrant flat gouache colors (Maisy-inspired).
+  - `claymation` *(aliases `clay`, `stop-motion`, `plasticine`)*: Handcrafted 3D stop-motion plasticine clay diorama.
+  - `paper-cutout` *(aliases `collage`, `eric-carle`, `cut-paper`)*: Layered hand-painted tissue and textured paper collage.
+  - `crayon-storybook` *(aliases `crayon`, `pastel`, `colored-pencil`)*: Cozy wax crayon, oil pastel, and colored pencil on toothy paper.
+  - `retro-midcentury` *(aliases `retro`, `little-golden-book`, `midcentury`)*: 1950s Little Golden Book vintage gouache and lithograph print texture.
+- **Via MCP tool**: `create_book_project(slug, title, idea, cast_ids=[...], entity_overrides={...}, style_preset="bold-gouache", bedtime_mode=True)`
 - **Via CLI**:
   ```bash
   python3 scripts/book_studio.py init \
     --slug "leos-cardboard-rocket" \
     --title "Leo's Cardboard Rocket" \
     --idea "Leo turns a cardboard moving box in the living room into a lunar rocket ship" \
+    --style-preset "bold-gouache" \
     --cast-ids char-leo char-maya pet-biscuit prop-cardboard-rocket \
     --bedtime-mode
   ```
 
 ---
 
+## Step 1b (Optional Dry-Run): Create & Edit Markdown Book Plan (`create_book_plan` / `apply_book_plan`)
+
+Before generating any images or building the HTML site, you can run in **Dry-Run Planning Mode** to produce a self-contained, human-editable `books/<slug>/book-plan.md` containing all instructions, settings, art style preset, page-by-page layout, narrative, shared composition, flap transformation mappings, and visual direction:
+1. **Create `book-plan.md` (Dry-Run — 0 images generated)**:
+   - **Via MCP tool**: `create_book_plan(slug, title, idea, style_preset="claymation", bedtime_mode=True)`
+   - **Via CLI**:
+     ```bash
+     python3 scripts/book_studio.py plan --slug "leos-cardboard-rocket" --style-preset "claymation"
+     ```
+2. **User / Agent Edits `books/<slug>/book-plan.md`**:
+   - Edit `Style Preset`, `Style Notes`, page titles, `#### Story Text`, `#### Shared Composition Lock`, `#### Flap Transformation Mappings`, `#### Reality Visual Direction`, or `#### Imaginary Visual Direction` directly in Markdown.
+3. **Apply Edits (`apply_book_plan`)**:
+   - **Via MCP tool**: `apply_book_plan(slug)`
+   - **Via CLI**:
+     ```bash
+     python3 scripts/book_studio.py apply-plan --slug "leos-cardboard-rocket"
+     ```
+   - Parses `book-plan.md`, validates and writes `storyboard.json` + `prompts.md`, and builds `preview.html` so the user can inspect the updated plan before generating illustrations.
+
+---
+
 ## Step 2: Author the Storyboard & Transformation Mappings (`save_book_storyboard`)
 
-Write the complete storyboard JSON (see `examples/sample-storyboard.json`) and save it via `save_book_storyboard`:
+Write the complete storyboard JSON (see `examples/sample-storyboard.json`) and save it via `save_book_storyboard` (or compile it from `book-plan.md` via `apply_book_plan`):
 1. **Per-Page Entity Binding (`entity_ids`)**: List which stable IDs (`["char-leo", "prop-cardboard-rocket"]`) appear on each page so `prompts.md` and `required_images` attach the exact labeled reference files for those entities.
 2. **Convincing Flap Reveals (`shared_composition` & `transformation_mappings`)**:
    - Every `lift-the-flap` page should specify `shared_composition` (`camera_angle`, `horizon_line`, `focal_subject_placement`, `character_pose`, `key_shapes`) and `transformation_mappings` (`reality_element` -> `imaginary_element` at `spatial_anchor`).

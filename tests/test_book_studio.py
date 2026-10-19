@@ -333,6 +333,168 @@ class BedtimeBookStudioTests(unittest.TestCase):
         self.assertIn("assets/page-01-reality.png", str(pub_ctx.exception))
         self.assertIn("assets/page-01-imaginary.png", str(pub_ctx.exception))
 
+    def test_issue11_art_style_presets_and_aliases(self) -> None:
+        presets_info = book_studio.list_style_presets()
+        self.assertGreaterEqual(presets_info["count"], 6)
+        preset_keys = {p["key"] for p in presets_info["presets"]}
+        self.assertIn("watercolor-ink", preset_keys)
+        self.assertIn("bold-gouache", preset_keys)
+        self.assertIn("claymation", preset_keys)
+        self.assertIn("paper-cutout", preset_keys)
+        self.assertIn("crayon-storybook", preset_keys)
+        self.assertIn("retro-midcentury", preset_keys)
+
+        # Verify natural aliases resolve to canonical preset keys
+        maisy = book_studio.resolve_art_style(style_preset="maisy", style_notes="Extra bright yellow accents.")
+        self.assertEqual(maisy["style_preset"], "bold-gouache")
+        self.assertIn("Maisy", maisy["art_style"])
+        self.assertIn("Extra bright yellow accents.", maisy["art_style"])
+
+        clay = book_studio.resolve_art_style(style_preset="stop-motion")
+        self.assertEqual(clay["style_preset"], "claymation")
+        self.assertIn("polymer-clay and plasticine", clay["art_style"])
+
+        # Configure studio default preset to bold-gouache, then override per-book with claymation
+        book_studio.configure_studio(
+            main_character_name="Leo",
+            main_character_description="4-year-old with curly brown hair",
+            default_style_preset="maisy",
+        )
+        profile = book_studio.get_studio_profile()
+        self.assertEqual(profile["defaults"]["style_preset"], "bold-gouache")
+
+        meta = book_studio.init_book_project(
+            slug="clay-adventure",
+            title="Leo's Clay Adventure",
+            idea="Sculpting a castle on the kitchen table",
+            style_preset="claymation",
+            style_notes="Warm miniature desk lamp glow.",
+            page_count=1,
+        )
+        self.assertEqual(meta["style_preset"], "claymation")
+        self.assertIn("polymer-clay and plasticine", meta["art_style"])
+        self.assertIn("Warm miniature desk lamp glow.", meta["art_style"])
+
+        # Global profile default must remain bold-gouache
+        self.assertEqual(book_studio.get_studio_profile()["defaults"]["style_preset"], "bold-gouache")
+
+    def test_issue12_editable_book_plan_dry_run_and_apply_roundtrip(self) -> None:
+        book_studio.configure_studio(
+            main_character_name="Leo",
+            main_character_age="4",
+            main_character_description="curly brown hair, denim overalls",
+        )
+        book_studio.upsert_identity(
+            entity_id="prop-cardboard-rocket",
+            name="Cardboard Box Rocket",
+            kind="prop",
+            reality_description="Brown corrugated cardboard moving box with crayon stars",
+            imaginary_transformation="Gleaming silver-and-red lunar command module",
+        )
+
+        # 1. Generate dry-run book-plan.md (2 pages)
+        plan_res = book_studio.generate_book_plan(
+            slug="dry-run-rocket",
+            title="Leo's Dry-Run Rocket",
+            idea="Leo turns a cardboard box into a moon rocket",
+            page_count=2,
+            style_preset="watercolor-ink",
+            bedtime_mode=True,
+        )
+        self.assertTrue(plan_res["dry_run"])
+        self.assertEqual(plan_res["images_generated"], 0)
+        self.assertFalse(plan_res["site_built"])
+
+        plan_path = Path(plan_res["book_plan_path"])
+        self.assertTrue(plan_path.exists())
+        project_dir = plan_path.parent
+        # Verify dry-run did not build index.html or standalone html
+        self.assertFalse((project_dir / "index.html").exists())
+        self.assertFalse((project_dir / "dry-run-rocket.html").exists())
+
+        md_text = plan_path.read_text(encoding="utf-8")
+        self.assertIn("## How to Edit & Execute This Plan", md_text)
+        self.assertIn("- **Style Preset**: watercolor-ink", md_text)
+        self.assertIn("### Page 01:", md_text)
+        self.assertIn("### Page 02:", md_text)
+
+        # 2. Simulate user editing book-plan.md:
+        #    - Switch style preset to 'maisy' (bold-gouache)
+        #    - Add custom Style Notes
+        #    - Edit Page 1 Story Text & Imaginary Visual Direction
+        #    - Append a new Page 03 section
+        edited_md = md_text.replace(
+            "- **Style Preset**: watercolor-ink",
+            "- **Style Preset**: maisy",
+        ).replace(
+            "- **Style Notes**: ",
+            "- **Style Notes**: Keep outlines extra bold and playful.",
+        ).replace(
+            "[Page 1 — Setting Up the Adventure] Leo explores the next step of the adventure: Leo turns a cardboard box into a moon rocket",
+            "Leo climbed into the big brown moving box on the living room rug.\n\nHe tapped the paper-plate dials twice: BEEP-BOOP!",
+        )
+
+        page3_block = """### Page 03: Touchdown on the Pillow Moon
+- **Badge**: Page 3
+- **Active Entities**: char-leo, prop-cardboard-rocket
+- **Refrain**: Shhh... moon landing complete.
+- **Flap Prompt**: Lift the flap to see the tranquil lunar sea!
+- **Imagination Label**: Inside Leo's Sleepy Moon World
+
+#### Story Text
+The rocket glided down onto a pile of soft bedtime pillows.
+
+#### Shared Composition Lock
+- **Camera Angle**: Wide twilight shot
+- **Horizon Line**: Lower third
+- **Subject Placement**: Center
+- **Character Pose**: Curled up cozily inside the box
+- **Key Shapes**: Box silhouette, pillow craters
+
+#### Flap Transformation Mappings
+- `[prop-cardboard-rocket] @ Center`: Cardboard box nestled in pillows -> Lunar lander resting on a glowing velvet moon crater
+
+#### Reality Visual Direction
+Cozy evening living room with Leo resting inside the cardboard box surrounded by soft pillows.
+
+#### Imaginary Visual Direction
+Matching the exact composition, the lunar lander rests peacefully on a glowing moon crater under starry skies.
+
+---
+
+## 5. End Card"""
+
+        edited_md = edited_md.replace("## 5. End Card", page3_block)
+        plan_path.write_text(edited_md, encoding="utf-8")
+
+        # 3. Apply the edited book-plan.md
+        applied = book_studio.apply_book_plan("dry-run-rocket")
+        self.assertEqual(applied["status"], "book_plan_applied")
+        self.assertEqual(applied["style_preset"], "bold-gouache")
+        self.assertEqual(applied["page_count"], 3)
+        self.assertEqual(applied["total_images_needed"], 1 + 3 * 2)  # 1 cover + 3*(reality+imaginary)
+        self.assertTrue(Path(applied["storyboard_path"]).exists())
+        self.assertTrue(Path(applied["prompts_markdown_path"]).exists())
+        self.assertTrue(Path(applied["preview_html_path"]).exists())
+
+        sb_after = json.loads(Path(applied["storyboard_path"]).read_text(encoding="utf-8"))
+        self.assertEqual(sb_after["style_preset"], "bold-gouache")
+        self.assertIn("Keep outlines extra bold and playful.", sb_after["art_style"])
+        self.assertEqual(len(sb_after["pages"]), 3)
+        self.assertEqual(
+            sb_after["pages"][0]["paragraphs"],
+            [
+                "Leo climbed into the big brown moving box on the living room rug.",
+                "He tapped the paper-plate dials twice: BEEP-BOOP!",
+            ],
+        )
+        self.assertEqual(sb_after["pages"][2]["title"], "Touchdown on the Pillow Moon")
+        self.assertEqual(
+            sb_after["pages"][2]["transformation_mappings"][0]["imaginary_element"],
+            "Lunar lander resting on a glowing velvet moon crater",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
+
