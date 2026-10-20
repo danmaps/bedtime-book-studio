@@ -194,6 +194,22 @@ Whenever a book is published, Bedtime Book Studio will automatically copy the bu
 
 ---
 
+## Optional Bookshelf
+
+[The bookshelf template](templates/bookshelf.html) is a single HTML file with a black background and a responsive, scrollable grid of cover thumbnails. Tap a cover to read its book in an iframe, then use **Back to shelf** to return to the same shelf position.
+
+Ask your agent: *"Set up the optional bookshelf with my books."* Agents can find the instructions in [AGENTS.md](AGENTS.md).
+
+To populate it yourself:
+
+1. Copy `templates/bookshelf.html` to `books/index.html` (or your chosen hosting folder).
+2. Find the `BOOK PATHS` comment. Copy its example link outside the comment for each book, setting `href` to the book HTML and `src` to its cover image. Paths are relative to the shelf file; set `alt` to the book's name for accessibility.
+3. Serve the shelf, books, and cover images together using your local or static hosting. With the existing local server serving `books/`, open `http://<your-lan-ip>:8765/index.html` on your phone or tablet.
+
+The template is optional and starts as an empty black page until you add links. It shows only covers, with no visible title, captions, or metadata. Comments mark places for optional decoration: ask your agent afterward to add a kid's name, theme colors, or another personal touch.
+
+---
+
 ## 🛠️ CLI & MCP Tool Reference
 
 | MCP Tool | CLI Command | Description |
