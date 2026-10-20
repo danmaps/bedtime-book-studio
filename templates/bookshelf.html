@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Bookshelf</title>
+  <style>
+    /* OPTIONAL DECORATION: change theme colors here when requested. */
+    :root { color-scheme: dark; --background: #000; --foreground: #fff; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--background); color: var(--foreground); font-family: system-ui, sans-serif; }
+    [hidden] { display: none !important; }
+    #shelf {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(min(150px, 100%), 1fr));
+      gap: clamp(20px, 4vw, 48px);
+      max-width: 1200px;
+      margin: auto;
+      padding: max(24px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
+    }
+    .book { display: block; align-self: start; }
+    .book img { display: block; width: 100%; height: auto; }
+    :focus-visible { outline: 2px solid var(--foreground); outline-offset: 6px; }
+    #reader { position: fixed; inset: 0; height: 100dvh; display: flex; flex-direction: column; background: var(--background); }
+    #navigation { padding: max(8px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) 8px max(12px, env(safe-area-inset-left)); }
+    #back { min-height: 44px; padding: 8px 12px; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+    #book-frame { display: block; width: 100%; flex: 1; min-height: 0; border: 0; }
+    body.reading { overflow: hidden; }
+  </style>
+</head>
+<body>
+  <main id="shelf" aria-label="Books">
+    <!-- OPTIONAL DECORATION: add a kid's name/title or other decoration here
+         only when requested. A heading can span the grid with grid-column: 1 / -1. -->
+
+    <!-- BOOK PATHS: copy the link below for each book, OUTSIDE this comment.
+         Replace href with the book HTML path and src with its cover image path.
+         Paths are relative to this shelf file's location. For example, when this
+         file is copied to books/index.html, use my-book.html and my-book/assets/cover.webp.
+         Set alt to the book's name for screen readers; it is not a visible caption.
+
+    <a class="book" href="my-book.html">
+      <img src="my-book/assets/cover.webp" alt="Book name" loading="lazy">
+    </a>
+    -->
+  </main>
+  <section id="reader" aria-label="Book reader" hidden>
+    <nav id="navigation" aria-label="Book navigation">
+      <button id="back" type="button">Back to shelf</button>
+    </nav>
+    <iframe id="book-frame" title="Book"></iframe>
+  </section>
+  <script>
+    const shelf = document.getElementById('shelf');
+    const reader = document.getElementById('reader');
+    const frame = document.getElementById('book-frame');
+    const back = document.getElementById('back');
+    let selectedBook;
+    let shelfScroll = 0;
+
+    shelf.addEventListener('click', (event) => {
+      const book = event.target.closest('a.book');
+      if (!book || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      event.preventDefault();
+      selectedBook = book;
+      shelfScroll = window.scrollY;
+      frame.title = book.querySelector('img').alt || 'Book';
+      frame.src = book.href;
+      shelf.hidden = true;
+      reader.hidden = false;
+      document.body.classList.add('reading');
+      back.focus();
+    });
+
+    back.addEventListener('click', () => {
+      frame.removeAttribute('src');
+      reader.hidden = true;
+      shelf.hidden = false;
+      document.body.classList.remove('reading');
+      window.scrollTo(0, shelfScroll);
+      selectedBook?.focus({ preventScroll: true });
+    });
+  </script>
+</body>
+</html>
