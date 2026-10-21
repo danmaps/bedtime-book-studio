@@ -3,7 +3,9 @@
 .env.*
 !.env.example
 .studio_profile.json
+local_profile
 local_profile/
+books
 books/
 
 # Python & virtual environments

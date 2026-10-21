@@ -3470,29 +3470,51 @@ def _is_port_open(port: int, host: str = "127.0.0.1") -> bool:
         return False
 
 
+def _is_book_http_server(port: int, host: str = "127.0.0.1") -> bool:
+    """Verify the port is open AND responds to HTTP GET/HEAD (not an unrelated RPC server)."""
+    try:
+        with socket.create_connection((host, port), timeout=0.4) as sock:
+            sock.sendall(b"HEAD / HTTP/1.0\r\nHost: localhost\r\n\r\n")
+            resp = sock.recv(128).decode("latin1", errors="ignore")
+            return resp.startswith("HTTP/1.") and (" 200 " in resp or " 301 " in resp or " 404 " in resp)
+    except OSError:
+        return False
+
+
 def ensure_local_server(books_dir: Path, port: int = 8765) -> Dict[str, Any]:
     """Ensure a background HTTP server is serving `books_dir` on `0.0.0.0:<port>`."""
     books_dir.mkdir(parents=True, exist_ok=True)
-    already_running = _is_port_open(port)
+    lan_ip = _get_lan_ip()
+    chosen_port = port
+    for candidate in range(port, port + 15):
+        if not _is_port_open(candidate):
+            chosen_port = candidate
+            break
+        if _is_book_http_server(candidate) and (lan_ip == "127.0.0.1" or _is_port_open(candidate, lan_ip)):
+            chosen_port = candidate
+            break
+
+    already_running = _is_book_http_server(chosen_port) and (
+        lan_ip == "127.0.0.1" or _is_port_open(chosen_port, lan_ip)
+    )
     if not already_running:
         subprocess.Popen(
-            [sys.executable, "-m", "http.server", str(port), "--bind", "0.0.0.0", "--directory", str(books_dir)],
+            [sys.executable, "-m", "http.server", str(chosen_port), "--bind", "0.0.0.0", "--directory", str(books_dir)],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             start_new_session=True,
         )
         for _ in range(10):
-            if _is_port_open(port):
+            if _is_book_http_server(chosen_port):
                 break
             time.sleep(0.1)
 
-    lan_ip = _get_lan_ip()
-    lan_base = f"http://{lan_ip}:{port}"
+    lan_base = f"http://{lan_ip}:{chosen_port}"
     return {
-        "running": _is_port_open(port),
-        "port": port,
+        "running": _is_book_http_server(chosen_port),
+        "port": chosen_port,
         "books_dir": str(books_dir),
-        "localhost_base": f"http://localhost:{port}",
+        "localhost_base": f"http://localhost:{chosen_port}",
         "lan_base": lan_base,
         "lan_qr_ascii": render_qr_ascii(lan_base),
     }
