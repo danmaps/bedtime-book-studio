@@ -141,8 +141,7 @@ Want to review or tweak the story text, page count, flap reveals, and visual pro
 2. **`save_book_storyboard` / `apply_book_plan`**: Writes `storyboard.json`, `prompts.md`, and `preview.html` with locked character continuity and matching **Reality** + **Imaginary** scene prompts for every page.
 3. **`ingest_generated_images`**: Your agent generates the illustrations, and Bedtime Book Studio center-crops every image to `1280x960` (4:3 landscape) and exports `.png` + `.webp`.
 4. **`build_and_publish_book`**:
-   - Generates the **single-file standalone HTML book** at `books/<slug>.html` (and `books/<slug>/<slug>.html`).
-   - Generates the standard multi-file folder at `books/<slug>/index.html`.
+   - Generates the **single-file standalone HTML book** at `books/<slug>.html` (with all CSS, JS, and `.webp` images inlined so each published book is only 1 file).
    - Starts the **local device web server** so you can read immediately!
 
 ---
@@ -152,7 +151,7 @@ Want to review or tweak the story text, page count, flap reveals, and visual pro
 ### 1. Recommended for iPad & Phones: Scan the Local Wi-Fi QR Code
 When `publish` (or `preview`) runs, Bedtime Book Studio automatically:
 - Starts a lightweight local HTTP server on port `8765` (configurable via `LOCAL_SERVER_PORT` in `.env`).
-- Generates a scannable **QR code** (`books/<slug>/qr-lan.svg` + a terminal ASCII QR code in the CLI/MCP output) pointing to `http://<your-lan-ip>:8765/<slug>/`.
+- Generates a scannable **QR code** (`books/<slug>/qr-lan.svg` + a terminal ASCII QR code in the CLI/MCP output) pointing to `http://<your-lan-ip>:8765/<slug>.html`.
 - **Point your iPad or iPhone Camera app at the QR code** to open the book directly in **Mobile Safari** with full lift-the-flap touch/drag gestures, `🌙 Bedtime Mode`, and "Add to Home Screen" support.
 - Need to restart the local server or print the QR code later? Run:
   ```bash
@@ -160,7 +159,7 @@ When `publish` (or `preview`) runs, Bedtime Book Studio automatically:
   ```
 
 ### 2. Single-File HTML Book (`books/<slug>.html`)
-- Every book also builds a completely self-contained `books/<slug>.html` file (~2–4 MB total, with all `.webp` illustrations, CSS, and JS embedded).
+- Every published book is a single, completely self-contained `books/<slug>.html` file (~1.5–5 MB total, with all `.webp` illustrations, CSS, and JS embedded).
 - **On Mac / PC / Android**: Double-click `books/<slug>.html` to open in any desktop browser with full interactivity.
 - **Static Hosting**: Drag-and-drop `books/<slug>.html` onto Netlify Drop, Cloudflare Pages, GitHub Pages, S3, or any static host for a permanent HTTPS link you can text to family.
 
@@ -173,7 +172,7 @@ When `publish` (or `preview`) runs, Bedtime Book Studio automatically:
 
 | Delivery Method | Target Browser / Viewer | Lift-the-Flap Drag & Tap | Page Turns & Bedtime Mode | Offline Support |
 | :--- | :--- | :---: | :---: | :--- |
-| **1. Local Wi-Fi QR Code (`http://<lan-ip>:8765/<slug>/`)** | **iPadOS / iOS Mobile Safari** | ✅ Full | ✅ Full | Same Wi-Fi LAN (or cached tab) |
+| **1. Local Wi-Fi QR Code (`http://<lan-ip>:8765/<slug>.html`)** | **iPadOS / iOS Mobile Safari** | ✅ Full | ✅ Full | Same Wi-Fi LAN (or cached tab) |
 | **2. Self-Hosted / Static Host (`https://.../<slug>.html`)** | **iPadOS / iOS Mobile Safari** | ✅ Full | ✅ Full | Cached after first load |
 | **3. Desktop Browser (`file:///.../books/<slug>.html`)** | **macOS / Windows / Linux Browser** | ✅ Full | ✅ Full | ✅ 100% Offline |
 | **4. AirDrop / iPadOS Files `.html` Attachment** | **iOS QuickLook (`QLPreviewController`)** | ⚠️ Disabled by iOS sandbox | ⚠️ Static layout only | Offline static view only |
@@ -190,7 +189,7 @@ If you run a local or remote web server directory (Nginx, Caddy, Tailscale Serve
 PUBLISH_WEB_ROOT="/var/www/my-site/books"
 PUBLISH_BASE_URL="https://example.com/books"
 ```
-Whenever a book is published, Bedtime Book Studio will automatically copy the built book into `<PUBLISH_WEB_ROOT>/<slug>` and return `<PUBLISH_BASE_URL>/<slug>`.
+Whenever a book is published, Bedtime Book Studio will automatically copy the single-file book into `<PUBLISH_WEB_ROOT>/<slug>.html` and return `<PUBLISH_BASE_URL>/<slug>.html`.
 
 ---
 
@@ -203,8 +202,8 @@ Ask your agent: *"Set up the optional bookshelf with my books."* Agents can find
 To populate it yourself:
 
 1. Copy `templates/bookshelf.html` to `books/index.html` (or your chosen hosting folder).
-2. Find the `BOOK PATHS` comment. Copy its example link outside the comment for each book, setting `href` to the book HTML and `src` to its cover image. Paths are relative to the shelf file; set `alt` to the book's name for accessibility.
-3. Serve the shelf, books, and cover images together using your local or static hosting. With the existing local server serving `books/`, open `http://<your-lan-ip>:8765/index.html` on your phone or tablet.
+2. Find the `BOOK PATHS` comment. Copy its example link outside the comment for each book, setting `href` to the single-file book HTML (`<slug>.html`) and `src` to its inlined `data:image/webp;base64,...` cover URI (or cover image path). Set `alt` to the book's name for accessibility.
+3. Serve the shelf and single-file books together using your local or static hosting. With the existing local server serving `books/`, open `http://<your-lan-ip>:8765/index.html` on your phone or tablet.
 
 The template is optional and starts as an empty black page until you add links. It shows only covers, with no visible title, captions, or metadata. Comments mark places for optional decoration: ask your agent afterward to add a kid's name, theme colors, or another personal touch.
 

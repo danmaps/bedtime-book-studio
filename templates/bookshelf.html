@@ -34,13 +34,13 @@
          only when requested. A heading can span the grid with grid-column: 1 / -1. -->
 
     <!-- BOOK PATHS: copy the link below for each book, OUTSIDE this comment.
-         Replace href with the book HTML path and src with its cover image path.
-         Paths are relative to this shelf file's location. For example, when this
-         file is copied to books/index.html, use my-book.html and my-book/assets/cover.webp.
+         Replace href with the single-file book HTML path (for example my-book.html)
+         and src with an inlined data:image/webp;base64,... cover URI (or relative cover path)
+         so each book remains a single self-contained file.
          Set alt to the book's name for screen readers; it is not a visible caption.
 
     <a class="book" href="my-book.html">
-      <img src="my-book/assets/cover.webp" alt="Book name" loading="lazy">
+      <img src="data:image/webp;base64,..." alt="Book name" loading="lazy">
     </a>
     -->
   </main>

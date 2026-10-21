@@ -261,7 +261,11 @@ class BedtimeBookStudioTests(unittest.TestCase):
         )
 
         pub = book_studio.publish_book("qr-test-book", serve_local=False, deploy_static=False)
-        self.assertTrue(pub["lan_url"].endswith("/qr-test-book/"))
+        self.assertTrue(pub["lan_url"].endswith("/qr-test-book.html"))
+        self.assertTrue(pub["cover_data_uri"].startswith("data:image/webp;base64,"))
+        self.assertFalse((self.books_dir / "qr-test-book" / "index.html").exists())
+        self.assertFalse((self.books_dir / "qr-test-book" / "qr-test-book.html").exists())
+        self.assertTrue((self.books_dir / "qr-test-book.html").exists())
         qr_svg_path = Path(pub["lan_qr_svg_path"])
         self.assertTrue(qr_svg_path.exists())
         svg_text = qr_svg_path.read_text(encoding="utf-8")

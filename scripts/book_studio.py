@@ -71,6 +71,7 @@ DEFAULT_ENV_VALUES: Dict[str, str] = {
     "DEFAULT_BEDTIME_MODE": "false",
     "DEFAULT_PAGE_COUNT": "12",
     "BOOKS_OUTPUT_DIR": "./books",
+    "BOOK_WORKSPACES_DIR": "",
     "LOCAL_SERVER_PORT": "8765",
     "PUBLISH_WEB_ROOT": "",
     "PUBLISH_BASE_URL": "",
@@ -681,7 +682,7 @@ def _flag_books_affected_by_identity(entity_id: str) -> List[Dict[str, Any]]:
     `revision_state.json` without silently overwriting or regenerating their artwork.
     """
     affected: List[Dict[str, Any]] = []
-    books_dir = get_books_dir()
+    books_dir = get_workspaces_dir()
     if not books_dir.exists():
         return affected
 
@@ -946,6 +947,8 @@ def get_studio_profile() -> Dict[str, Any]:
     )
 
     books_dir = resolve_repo_path(env.get("BOOKS_OUTPUT_DIR", "./books") or "./books")
+    workspaces_raw = env.get("BOOK_WORKSPACES_DIR", "").strip()
+    workspaces_dir = resolve_repo_path(workspaces_raw) if workspaces_raw else books_dir
     web_root_raw = env.get("PUBLISH_WEB_ROOT", "").strip()
     web_root = str(resolve_repo_path(web_root_raw)) if web_root_raw else ""
 
@@ -979,6 +982,7 @@ def get_studio_profile() -> Dict[str, Any]:
         },
         "paths": {
             "books_output_dir": str(books_dir),
+            "book_workspaces_dir": str(workspaces_dir),
             "local_server_port": int(env.get("LOCAL_SERVER_PORT", "8765") or 8765),
             "publish_web_root": web_root,
             "publish_base_url": env.get("PUBLISH_BASE_URL", "").rstrip("/"),
@@ -1033,6 +1037,7 @@ def configure_studio(
     default_bedtime_mode: Optional[bool] = None,
     default_page_count: Optional[int] = None,
     books_output_dir: Optional[str] = None,
+    book_workspaces_dir: Optional[str] = None,
     local_server_port: Optional[int] = None,
     publish_web_root: Optional[str] = None,
     publish_base_url: Optional[str] = None,
@@ -1069,6 +1074,8 @@ def configure_studio(
         updates["DEFAULT_PAGE_COUNT"] = str(default_page_count)
     if books_output_dir is not None:
         updates["BOOKS_OUTPUT_DIR"] = books_output_dir
+    if book_workspaces_dir is not None:
+        updates["BOOK_WORKSPACES_DIR"] = book_workspaces_dir
     if local_server_port is not None:
         updates["LOCAL_SERVER_PORT"] = str(local_server_port)
     if publish_web_root is not None:
@@ -1271,45 +1278,80 @@ def get_books_dir() -> Path:
     return out
 
 
+def get_workspaces_dir() -> Path:
+    profile = get_studio_profile()
+    out = Path(profile["paths"].get("book_workspaces_dir") or profile["paths"]["books_output_dir"])
+    out.mkdir(parents=True, exist_ok=True)
+    return out
+
+
 def list_books() -> List[Dict[str, Any]]:
     books_dir = get_books_dir()
+    workspaces_dir = get_workspaces_dir()
     profile = get_studio_profile()
     local_port = profile["paths"]["local_server_port"]
     web_root = Path(profile["paths"]["publish_web_root"]) if profile["paths"]["publish_web_root"] else None
     base_url = profile["paths"]["publish_base_url"]
 
     books: List[Dict[str, Any]] = []
-    if not books_dir.exists():
-        return books
+    seen_slugs: set[str] = set()
 
-    for child in sorted(books_dir.iterdir()):
-        if not child.is_dir() or child.name.startswith("."):
-            continue
-        index_html = child / "index.html"
-        storyboard_json = child / "storyboard.json"
-        plan_md = child / "book-plan.md"
-        if not (index_html.exists() or storyboard_json.exists() or plan_md.exists()):
-            continue
+    if workspaces_dir.exists():
+        for child in sorted(workspaces_dir.iterdir()):
+            if not child.is_dir() or child.name.startswith("."):
+                continue
+            slug = child.name
+            standalone_html = books_dir / f"{slug}.html"
+            if not standalone_html.exists() and (child / f"{slug}.html").exists():
+                standalone_html = child / f"{slug}.html"
+            storyboard_json = child / "storyboard.json"
+            plan_md = child / "book-plan.md"
+            if not (standalone_html.exists() or storyboard_json.exists() or plan_md.exists()):
+                continue
 
-        slug = child.name
-        standalone_html = child / f"{slug}.html"
-        preview_html = child / "preview.html"
-        published_dir = (web_root / slug) if web_root else None
-        is_published = bool(published_dir and (published_dir / "index.html").exists())
-        live_url = f"{base_url}/{slug}" if (is_published and base_url) else None
+            seen_slugs.add(slug)
+            preview_html = child / "preview.html"
+            published_file = (web_root / f"{slug}.html") if web_root else None
+            is_published = bool(published_file and published_file.exists())
+            live_url = f"{base_url}/{slug}.html" if (is_published and base_url) else None
 
-        books.append({
-            "slug": slug,
-            "workspace_dir": str(child),
-            "book_plan_markdown": str(plan_md) if plan_md.exists() else None,
-            "single_file_html": str(standalone_html) if standalone_html.exists() else None,
-            "preview_html": str(preview_html) if preview_html.exists() else None,
-            "has_book_plan": plan_md.exists(),
-            "has_storyboard": storyboard_json.exists(),
-            "has_reader": index_html.exists(),
-            "local_url": f"http://localhost:{local_port}/{slug}/" if index_html.exists() else None,
-            "custom_live_url": live_url,
-        })
+            books.append({
+                "slug": slug,
+                "workspace_dir": str(child),
+                "book_plan_markdown": str(plan_md) if plan_md.exists() else None,
+                "single_file_html": str(standalone_html) if standalone_html.exists() else None,
+                "preview_html": str(preview_html) if preview_html.exists() else None,
+                "has_book_plan": plan_md.exists(),
+                "has_storyboard": storyboard_json.exists(),
+                "has_reader": standalone_html.exists(),
+                "local_url": f"http://localhost:{local_port}/{slug}.html" if standalone_html.exists() else None,
+                "custom_live_url": live_url,
+            })
+
+    if books_dir.exists():
+        for html_file in sorted(books_dir.glob("*.html")):
+            if html_file.name == "index.html":
+                continue
+            slug = html_file.stem
+            if slug in seen_slugs:
+                continue
+            seen_slugs.add(slug)
+            published_file = (web_root / f"{slug}.html") if web_root else None
+            is_published = bool(published_file and published_file.exists())
+            live_url = f"{base_url}/{slug}.html" if (is_published and base_url) else None
+            books.append({
+                "slug": slug,
+                "workspace_dir": None,
+                "book_plan_markdown": None,
+                "single_file_html": str(html_file),
+                "preview_html": None,
+                "has_book_plan": False,
+                "has_storyboard": False,
+                "has_reader": True,
+                "local_url": f"http://localhost:{local_port}/{slug}.html",
+                "custom_live_url": live_url,
+            })
+
     return books
 
 
@@ -1341,7 +1383,7 @@ def init_book_project(
     identities = load_identities()
 
     slug = slugify(slug or title)
-    project_dir = get_books_dir() / slug
+    project_dir = get_workspaces_dir() / slug
     assets_dir = project_dir / "assets"
     refs_dir = assets_dir / "references"
     refs_dir.mkdir(parents=True, exist_ok=True)
@@ -1711,7 +1753,7 @@ def validate_book_storyboard(
 ) -> Dict[str, Any]:
     """Validate an existing book's `storyboard.json` (and optionally its required image assets on disk)."""
     slug = slugify(slug)
-    project_dir = get_books_dir() / slug
+    project_dir = get_workspaces_dir() / slug
     sb_path = project_dir / "storyboard.json"
     if not sb_path.exists():
         raise FileNotFoundError(f"Missing storyboard.json in {project_dir}")
@@ -1752,7 +1794,7 @@ def save_storyboard(
     and transformation mappings, and generate `prompts.md` + the structured image generation plan.
     """
     slug = slugify(slug)
-    project_dir = get_books_dir() / slug
+    project_dir = get_workspaces_dir() / slug
     project_dir.mkdir(parents=True, exist_ok=True)
 
     meta_path = project_dir / "book_meta.json"
@@ -2128,7 +2170,7 @@ def generate_book_plan(
     complete instructions—WITHOUT generating images or building the final HTML book site.
     """
     slug = slugify(slug or title or "book-plan")
-    project_dir = get_books_dir() / slug
+    project_dir = get_workspaces_dir() / slug
     meta_path = project_dir / "book_meta.json"
     sb_path = project_dir / "storyboard.json"
 
@@ -2622,7 +2664,7 @@ def apply_book_plan(
     (still without generating images or building the final reader site until requested).
     """
     slug = slugify(slug)
-    project_dir = get_books_dir() / slug
+    project_dir = get_workspaces_dir() / slug
     resolved_plan_path = Path(os.path.expanduser(plan_path)).resolve() if plan_path else (project_dir / "book-plan.md")
     if not resolved_plan_path.exists():
         raise FileNotFoundError(f"Book plan Markdown file not found: {resolved_plan_path}")
@@ -2698,7 +2740,7 @@ def ingest_book_images(
     so approved or prior versions can always be restored via `rollback_book_asset`.
     """
     slug = slugify(slug)
-    project_dir = get_books_dir() / slug
+    project_dir = get_workspaces_dir() / slug
     assets_dir = project_dir / "assets"
     history_root = assets_dir / "history"
     assets_dir.mkdir(parents=True, exist_ok=True)
@@ -2827,7 +2869,7 @@ def revise_book_page(
         raise ValueError(f"scope must be one of {VALID_REVISION_SCOPES}")
 
     slug = slugify(slug)
-    project_dir = get_books_dir() / slug
+    project_dir = get_workspaces_dir() / slug
     sb_path = project_dir / "storyboard.json"
     if not sb_path.exists():
         raise FileNotFoundError(f"Missing storyboard.json in {project_dir}")
@@ -2909,9 +2951,9 @@ def revise_book_page(
             entry["status"] = "check_alignment"
     _save_revision_state(project_dir, rev_state)
 
-    # If text-only (or if reader already exists), atomically rebuild reader immediately
+    # If text-only (or if single-file reader already exists), atomically rebuild reader immediately
     rebuilt_reader = None
-    if scope == "text-only" or (project_dir / "index.html").exists():
+    if scope == "text-only" or (get_books_dir() / f"{slug}.html").exists():
         rebuilt_reader = publish_book(slug, serve_local=False, deploy_static=False, strict_assets=False)
 
     tasks_for_affected = [
@@ -2938,7 +2980,7 @@ def approve_book_assets(
 ) -> Dict[str, Any]:
     """Mark storyboard and/or specific illustration assets (`cover`, `page-01-reality`, ...) as approved."""
     slug = slugify(slug)
-    project_dir = get_books_dir() / slug
+    project_dir = get_workspaces_dir() / slug
     rev_state = _load_revision_state(project_dir)
 
     if approve_storyboard is not None:
@@ -2974,7 +3016,7 @@ def rollback_book_asset(
     from `assets/history/<asset_key>/` and atomically rebuild the book reader.
     """
     slug = slugify(slug)
-    project_dir = get_books_dir() / slug
+    project_dir = get_workspaces_dir() / slug
     assets_dir = project_dir / "assets"
     stem = asset_key[:-4] if asset_key.endswith(".png") else asset_key
 
@@ -3032,7 +3074,7 @@ def rollback_book_asset(
 def get_revision_status(slug: str) -> Dict[str, Any]:
     """Return the full revision, version history, and approval state for a book."""
     slug = slugify(slug)
-    project_dir = get_books_dir() / slug
+    project_dir = get_workspaces_dir() / slug
     return _load_revision_state(project_dir)
 
 
@@ -3048,7 +3090,7 @@ def generate_book_preview(slug: str) -> Dict[str, Any]:
     and a scannable Local Wi-Fi QR code for iPad/phone testing.
     """
     slug = slugify(slug)
-    project_dir = get_books_dir() / slug
+    project_dir = get_workspaces_dir() / slug
     sb_path = project_dir / "storyboard.json"
     if not sb_path.exists():
         raise FileNotFoundError(f"Missing storyboard.json in {project_dir}")
@@ -3065,7 +3107,7 @@ def generate_book_preview(slug: str) -> Dict[str, Any]:
 
     local_port = int(profile["paths"]["local_server_port"] or 8765)
     lan_ip = _get_lan_ip()
-    lan_book_url = f"http://{lan_ip}:{local_port}/{slug}/"
+    lan_book_url = f"http://{lan_ip}:{local_port}/{slug}.html"
     qr_svg_path = project_dir / "qr-lan.svg"
     _atomic_write_text(qr_svg_path, render_qr_svg(lan_book_url, title=f"Scan to open {title}"))
 
@@ -3468,15 +3510,14 @@ def publish_book(
 ) -> Dict[str, Any]:
     """
     Validate storyboard and required image assets, then atomically build:
-      1. A self-contained single-file HTML book (`<slug>.html`) with all CSS, JS, and images inlined.
-      2. A standard multi-file web reader (`index.html`, `styles.css`, `script.js`, `assets/`).
-      3. By default, host locally on the user's device (`http://localhost:<port>/<slug>/` and LAN URL)
+      1. A self-contained single-file HTML book (`<books_dir>/<slug>.html`) with all CSS, JS, and images inlined.
+      2. By default, host locally on the user's device (`http://localhost:<port>/<slug>.html` and LAN URL)
          and generate a scannable Local Wi-Fi QR code (`<project_dir>/qr-lan.svg` + `lan_qr_ascii`).
-      4. Optionally copy to `PUBLISH_WEB_ROOT` if configured in `.env`.
+      3. Optionally copy the single file `<slug>.html` to `PUBLISH_WEB_ROOT` if configured in `.env`.
     """
     slug = slugify(slug)
     books_dir = get_books_dir()
-    project_dir = books_dir / slug
+    project_dir = get_workspaces_dir() / slug
     sb_path = project_dir / "storyboard.json"
     if not sb_path.exists():
         raise FileNotFoundError(f"Missing storyboard.json in {project_dir}")
@@ -3513,22 +3554,7 @@ def publish_book(
         .replace("__BEDTIME_MODE_DEFAULT__", "true" if is_bedtime else "false")
     )
 
-    # 1. Atomically build standard multi-file reader in <project_dir>/
-    pages_external = _build_reader_pages_js(storyboard, project_dir, inline_data_uris=False)
-    rendered_script_external = re.sub(
-        r"/\*\s*__TOTAL_STORY_PAGES__\s*\*/\s*\d+",
-        str(len(story_pages)),
-        script_tpl,
-    ).replace(
-        "/* __BOOK_PAGES_JSON__ */ []",
-        json.dumps(pages_external, indent=2, ensure_ascii=False),
-    )
-
-    _atomic_write_text(project_dir / "index.html", base_html)
-    _atomic_write_text(project_dir / "styles.css", styles_css)
-    _atomic_write_text(project_dir / "script.js", rendered_script_external)
-
-    # 2. Atomically build self-contained SINGLE-FILE HTML book (<slug>.html)
+    # 1. Atomically build self-contained SINGLE-FILE HTML book (<books_dir>/<slug>.html)
     pages_inlined = _build_reader_pages_js(storyboard, project_dir, inline_data_uris=True)
     rendered_script_inlined = re.sub(
         r"/\*\s*__TOTAL_STORY_PAGES__\s*\*/\s*\d+",
@@ -3550,15 +3576,24 @@ def publish_book(
         single_file_html_content,
     )
 
-    standalone_file_in_project = project_dir / f"{slug}.html"
+    # Clean up any legacy multi-file reader copies inside project_dir
+    for legacy_name in ("index.html", "styles.css", "script.js", f"{slug}.html"):
+        legacy_file = project_dir / legacy_name
+        if legacy_file.exists():
+            try:
+                legacy_file.unlink()
+            except OSError:
+                pass
+
     standalone_file_in_root = books_dir / f"{slug}.html"
-    _atomic_write_text(standalone_file_in_project, single_file_html_content)
     _atomic_write_text(standalone_file_in_root, single_file_html_content)
+
+    cover_data_uri = _encode_asset_as_data_uri(project_dir, "assets/cover.png")
 
     paths_cfg = profile["paths"]
     chosen_port = int(port or paths_cfg["local_server_port"] or 8765)
     lan_ip = _get_lan_ip()
-    lan_url = f"http://{lan_ip}:{chosen_port}/{slug}/"
+    lan_url = f"http://{lan_ip}:{chosen_port}/{slug}.html"
     qr_svg_path = project_dir / "qr-lan.svg"
     _atomic_write_text(qr_svg_path, render_qr_svg(lan_url, title=f"Scan to read {title}"))
     lan_qr_ascii = render_qr_ascii(lan_url)
@@ -3568,28 +3603,29 @@ def publish_book(
         "bedtime_mode_default": is_bedtime,
         "validation_warnings": val_res["warnings"],
         "workspace_dir": str(project_dir),
-        "single_file_html": str(standalone_file_in_project),
+        "single_file_html": str(standalone_file_in_root),
         "single_file_html_copy": str(standalone_file_in_root),
-        "file_url": f"file://{standalone_file_in_project}",
+        "cover_data_uri": cover_data_uri,
+        "file_url": f"file://{standalone_file_in_root}",
         "local_url": None,
         "local_single_file_url": None,
         "lan_url": lan_url,
-        "lan_single_file_url": f"http://{lan_ip}:{chosen_port}/{slug}.html",
+        "lan_single_file_url": lan_url,
         "lan_qr_svg_path": str(qr_svg_path),
         "lan_qr_ascii": lan_qr_ascii,
         "custom_static_site_dir": None,
         "custom_live_url": None,
     }
 
-    # 3. Default Local Device Hosting
+    # 2. Default Local Device Hosting
     if serve_local:
         srv = ensure_local_server(books_dir, chosen_port)
-        result["local_url"] = f"{srv['localhost_base']}/{slug}/"
+        result["local_url"] = f"{srv['localhost_base']}/{slug}.html"
         result["local_single_file_url"] = f"{srv['localhost_base']}/{slug}.html"
-        result["lan_url"] = f"{srv['lan_base']}/{slug}/"
+        result["lan_url"] = f"{srv['lan_base']}/{slug}.html"
         result["lan_single_file_url"] = f"{srv['lan_base']}/{slug}.html"
 
-    # 4. Optional Custom Static Web Root Copy
+    # 3. Optional Custom Static Web Root Copy (1 file per book: <web_root>/<slug>.html)
     web_root_str = web_root_override if web_root_override is not None else paths_cfg["publish_web_root"]
     base_url_str = (
         base_url_override.rstrip("/")
@@ -3597,21 +3633,14 @@ def publish_book(
         else paths_cfg["publish_base_url"]
     )
     if deploy_static and web_root_str:
-        target_dir = Path(os.path.expanduser(web_root_str)).resolve() / slug
-        target_assets = target_dir / "assets"
-        target_assets.mkdir(parents=True, exist_ok=True)
-        for fname in ("index.html", "styles.css", "script.js", f"{slug}.html", "qr-lan.svg"):
-            src_f = project_dir / fname
-            if src_f.exists():
-                shutil.copy2(src_f, target_dir / fname)
-        src_assets = project_dir / "assets"
-        if src_assets.exists():
-            for asset_file in src_assets.iterdir():
-                if asset_file.is_file() and asset_file.suffix.lower() in (".png", ".webp", ".jpg", ".jpeg"):
-                    shutil.copy2(asset_file, target_assets / asset_file.name)
-        result["custom_static_site_dir"] = str(target_dir)
+        target_root = Path(os.path.expanduser(web_root_str)).resolve()
+        target_root.mkdir(parents=True, exist_ok=True)
+        target_file = target_root / f"{slug}.html"
+        if standalone_file_in_root.resolve() != target_file.resolve():
+            shutil.copy2(standalone_file_in_root, target_file)
+        result["custom_static_site_dir"] = str(target_file)
         if base_url_str:
-            result["custom_live_url"] = f"{base_url_str}/{slug}"
+            result["custom_live_url"] = f"{base_url_str}/{slug}.html"
 
     return result
 

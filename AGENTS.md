@@ -2,8 +2,11 @@
 
 `templates/bookshelf.html` is an optional, single-file bookshelf. When asked for
 a shelf, copy it to the desired location (for example `books/index.html`) and
-populate the commented book links with HTML paths and cover image paths relative
-to that location. Give each cover meaningful alt text for accessibility.
+populate the commented book links with single-file book HTML paths (`<slug>.html`)
+and inlined `data:image/webp;base64,...` cover image URIs (returned as
+`cover_data_uri` by `publish_book`) so the shelf and each book are self-contained
+single HTML files with no external asset directories required. Give each cover
+meaningful alt text for accessibility.
 
 The default is a black, scrollable, responsive cover grid. Books open in an
 iframe with a Back to shelf button. The unconfigured template is simply black.
